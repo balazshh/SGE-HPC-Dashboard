@@ -228,29 +228,59 @@ Cron examples for the real HPC-side shell collectors live in `docs/deploy/cron.m
 
 ## Production deployment
 
-### 1. Build the app
+This is the recommended deployment shape for the current Bosch test VM setup:
+
+- app checkout lives under `/d/hpc-dashboard-test`
+- Bun server listens on `127.0.0.1:3001`
+- Nginx terminates TLS and proxies to Bun
+- the web VM does **not** connect to HPC directly
+- shell collectors run on the HPC side and write into MySQL
+
+### 1. Deploy the app on the VM
 
 ```bash
+cd /d
+git clone https://github.com/balazshh/SGE-HPC-Dashboard.git hpc-dashboard-test
+cd /d/hpc-dashboard-test
+cp .env.example .env
+```
+
+Set `/d/hpc-dashboard-test/.env` like this:
+
+```env
+APP_BASE_URL=https://bp-hpc-dashboard-test.emea.bosch.com
+PORT=3001
+
+BETTER_AUTH_SECRET=
+DB_WRITE=0
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=hpc_dashboard
+DB_USER=hpc_dashboard
+DB_PASSWORD=change-me
+
+ENTRA_CLIENT_ID=
+ENTRA_TENANT_ID=
+ENTRA_CLIENT_SECRET=
+```
+
+Notes:
+
+- `DB_WRITE=0` is fine on the web VM. This VM only reads MySQL.
+- if Entra is not configured, the app stays in demo-auth mode
+- real HPC data still appears as long as the HPC-side collectors write into MySQL
+
+### 2. Install dependencies and build
+
+```bash
+cd /d/hpc-dashboard-test
 bun install
 bun run build
 ```
 
 This creates `dist/`, which the Bun server serves directly.
 
-### 2. Minimal single-host deployment
-
-Copy the repo to the server, install deps, build, and run:
-
-```bash
-cp .env.example .env
-bun install
-bun run build
-bun run start
-```
-
-For a real deployment, run it under `systemd` or in a container.
-
-### 3. systemd example
+### 3. Run under systemd
 
 Create `/etc/systemd/system/hpc-dashboard.service`:
 
@@ -261,10 +291,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=hpc-dashboard
-WorkingDirectory=/opt/hpc-dashboard
+User=root
+WorkingDirectory=/d/hpc-dashboard-test
 Environment=NODE_ENV=production
-EnvironmentFile=/opt/hpc-dashboard/.env
+EnvironmentFile=/d/hpc-dashboard-test/.env
 ExecStart=/usr/local/bin/bun src/server/index.ts
 Restart=always
 RestartSec=5
@@ -273,49 +303,96 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-Then:
+If Bun is not in `/usr/local/bin/bun`, check it first:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now hpc-dashboard
-sudo systemctl status hpc-dashboard
+which bun
 ```
 
-### 4. Nginx reverse proxy
-
-Sample config: `docs/deploy/nginx.conf.sample`
-
-Typical flow:
-
-- Nginx listens on `80/443`
-- Bun app listens on `127.0.0.1:3001`
-- `APP_BASE_URL` matches the public HTTPS URL
-
-### 5. Container deployment
-
-A Bun-only container build is provided in `Containerfile`.
-
-Build:
+Then enable the service:
 
 ```bash
-docker build -t hpc-dashboard -f Containerfile .
+systemctl daemon-reload
+systemctl enable --now hpc-dashboard
+systemctl status hpc-dashboard
 ```
 
-Run:
+### 4. Nginx reverse proxy on the VM
+
+Use `/etc/nginx/conf.d/bp-hpc-dashboard-test.conf`:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name bp-hpc-dashboard-test.emea.bosch.com;
+
+    ssl_certificate /etc/pki/tls/certs/bp0vm00090.crt;
+    ssl_certificate_key /etc/ssl/private/bp0vm00090.key;
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+    listen 80;
+    server_name bp-hpc-dashboard-test.emea.bosch.com;
+    return 301 https://$host$request_uri;
+}
+```
+
+Then reload Nginx:
 
 ```bash
-docker run --rm -p 3001:3001 --env-file .env hpc-dashboard
+nginx -t
+systemctl reload nginx
 ```
+
+Notes:
+
+- do not use a separate `/assets` alias for this app; Bun already serves `dist/`
+- ignore unrelated terminal websocket routes from other configs unless you really need them here
+
+### 5. HPC-side collectors
+
+This VM does not need direct SSH or scheduler access.
+Run the shell collectors on the HPC side: login node, submit host, or any machine where `qstat` and `qacct` already work.
+
+```bash
+cp scripts/hpc/collector.env.example scripts/hpc/collector.env
+vi scripts/hpc/collector.env
+./scripts/hpc/collect-live.sh
+./scripts/hpc/collect-history.sh
+./scripts/hpc/aggregate-rollups.sh
+./scripts/hpc/cleanup-old-data.sh
+```
+
+Those scripts write directly into MySQL. The web app only reads the resulting tables.
+
+Cron examples for the HPC side live in `docs/deploy/cron.md`.
+
+### 6. Container deployment
+
+A Bun-only container build is still available in `Containerfile`, but for the current VM the `systemd + nginx` setup above is the intended path.
 
 ## Recommended production checklist
 
-- [ ] `APP_BASE_URL` points to the final HTTPS URL
-- [ ] `PORT` is set to the internal Bun port
+- [ ] app checkout exists at `/d/hpc-dashboard-test`
+- [ ] `APP_BASE_URL=https://bp-hpc-dashboard-test.emea.bosch.com`
+- [ ] `PORT=3001`
+- [ ] Bun service is running under systemd
+- [ ] Nginx proxies `443 -> 127.0.0.1:3001`
 - [ ] Entra secrets are present if SSO is required
 - [ ] MySQL schema from `drizzle/0000_initial.sql` is applied
 - [ ] `scripts/hpc/collector.env` exists on the HPC side
 - [ ] MySQL is reachable from the HPC-side collector host
-- [ ] collector cron jobs are installed
+- [ ] collector cron jobs are installed on the HPC side
 - [ ] reverse proxy forwards `Host` and `X-Forwarded-Proto`
 - [ ] health check `/api/health` is monitored
 - [ ] `.env` is not committed
@@ -386,6 +463,26 @@ qacct
 ```
 
 Then fix `scripts/hpc/collector.env` and rerun the shell collectors.
+
+### Site opens but still shows fixture data
+
+That means the app could not read real rows from MySQL yet.
+Check these first:
+
+- `jobs_current` has rows
+- `cluster_snapshots` has rows
+- `jobs_history` has rows
+- HPC-side cron actually ran
+- the web VM can reach the MySQL server
+
+### Nginx serves errors but Bun health is fine
+
+Usually one of these is wrong:
+
+- wrong `server_name`
+- wrong TLS cert path
+- nginx config still contains unrelated routes
+- proxy target is not `127.0.0.1:3001`
 
 ## File map
 
