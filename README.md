@@ -5,7 +5,7 @@ Single-repo HPC dashboard: React SPA + Bun API server + optional MySQL persisten
 The app runs in two modes:
 
 - **demo mode**: no Entra, no MySQL, fixture data only
-- **production mode**: Entra auth enabled, collectors writing to MySQL, reverse proxy in front
+- **production mode**: Entra auth enabled, shell collectors running on the HPC side write into MySQL, reverse proxy in front
 
 ## What is in the repo
 
@@ -122,13 +122,15 @@ Copy `.env.example` to `.env` and set what you need.
 
 ### HPC collectors
 
+These variables are mainly for the local Bun test collectors. Real production collection should use the shell scripts under `scripts/hpc/` on the HPC side.
+
 | Variable | Required | Purpose |
 | --- | --- | --- |
 | `QSTAT_CLUSTER_COMMAND` | no | Real cluster summary command |
 | `QSTAT_JOBS_COMMAND` | no | Real active jobs command |
 | `QACCT_COMMAND` | no | Real accounting/history command |
 
-If the HPC command variables are empty, the collectors use sample fixture files.
+If the HPC command variables are empty, the local Bun collectors use sample fixture files.
 
 ## Database setup
 
@@ -181,8 +183,31 @@ Set `APP_BASE_URL` to the same public URL users will open in the browser.
 
 ## Collector jobs
 
-The web app itself can run without MySQL because reads fall back to mock data.
-Real dashboards need the collectors plus `DB_WRITE=1`.
+There are two collector paths:
+
+- `scripts/hpc/*.sh` — production path, runs on the HPC side and writes directly to MySQL
+- `scripts/*.mjs` — local/dev path, useful for parser checks and fixture-based testing
+
+The web app VM does not need direct HPC access. It only needs MySQL access.
+
+### Production collector flow
+
+1. Put a checkout of this repo on a machine where `qstat` and `qacct` already work.
+2. Copy `scripts/hpc/collector.env.example` to `scripts/hpc/collector.env`.
+3. Set the app MySQL credentials there.
+4. Run the shell collectors from cron.
+5. The app reads the loaded rows from MySQL.
+
+Shell collectors:
+
+```bash
+cp scripts/hpc/collector.env.example scripts/hpc/collector.env
+vi scripts/hpc/collector.env
+./scripts/hpc/collect-live.sh
+./scripts/hpc/collect-history.sh
+./scripts/hpc/aggregate-rollups.sh
+./scripts/hpc/cleanup-old-data.sh
+```
 
 ### Validate parsers
 
@@ -190,31 +215,16 @@ Real dashboards need the collectors plus `DB_WRITE=1`.
 bun run check:parsers
 ```
 
-### Collect live queue state
+### Local/dev collector commands
 
 ```bash
 DB_WRITE=1 bun run collect:live
-```
-
-### Collect job history
-
-```bash
 DB_WRITE=1 bun run collect:history
-```
-
-### Build hourly and daily rollups
-
-```bash
 DB_WRITE=1 bun run collect:rollups
-```
-
-### Cleanup old data
-
-```bash
 DB_WRITE=1 bun run cleanup:data
 ```
 
-Cron examples live in `docs/deploy/cron.md`.
+Cron examples for the real HPC-side shell collectors live in `docs/deploy/cron.md`.
 
 ## Production deployment
 
@@ -303,7 +313,8 @@ docker run --rm -p 3001:3001 --env-file .env hpc-dashboard
 - [ ] `PORT` is set to the internal Bun port
 - [ ] Entra secrets are present if SSO is required
 - [ ] MySQL schema from `drizzle/0000_initial.sql` is applied
-- [ ] `DB_WRITE=1` is set for collector jobs
+- [ ] `scripts/hpc/collector.env` exists on the HPC side
+- [ ] MySQL is reachable from the HPC-side collector host
 - [ ] collector cron jobs are installed
 - [ ] reverse proxy forwards `Host` and `X-Forwarded-Proto`
 - [ ] health check `/api/health` is monitored
@@ -364,9 +375,9 @@ Usually one of these is wrong:
 - Entra redirect URI
 - proxy headers
 
-### Collector commands fail on the server
+### Collector commands fail on the HPC side
 
-Test them manually first:
+Test them manually on the machine running the shell collectors:
 
 ```bash
 qstat -g c
@@ -374,7 +385,7 @@ qstat -u '*'
 qacct
 ```
 
-Then export the matching env vars and rerun the Bun collector commands.
+Then fix `scripts/hpc/collector.env` and rerun the shell collectors.
 
 ## File map
 
