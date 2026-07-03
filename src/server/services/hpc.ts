@@ -1,11 +1,5 @@
 import { and, desc, eq, gte } from "drizzle-orm";
 
-import {
-  ACTIVE_JOBS,
-  DASHBOARD_SUMMARY,
-  HISTORY_BY_PRESET,
-  JOB_HISTORY,
-} from "../../shared/constants/mock-data";
 import type {
   ClusterSummary,
   HistoryBucket,
@@ -85,65 +79,59 @@ function formatDailyLabel(value: Date, preset: HistoryPreset) {
   }).format(value);
 }
 
-async function withDbFallback<T>(query: () => Promise<T>, fallback: () => T | Promise<T>) {
-  try {
-    return await query();
-  } catch {
-    return fallback();
-  }
-}
-
 export async function getDashboardSummary(owner: string): Promise<ClusterSummary> {
-  return withDbFallback(async () => {
-    const db = createDb();
-    const [latest] = await db
-      .select()
-      .from(clusterSnapshots)
-      .orderBy(desc(clusterSnapshots.recordedAt))
-      .limit(1);
+  const db = createDb();
+  const [latest] = await db
+    .select()
+    .from(clusterSnapshots)
+    .orderBy(desc(clusterSnapshots.recordedAt))
+    .limit(1);
 
-    if (!latest) {
-      throw new Error("No cluster snapshot rows");
-    }
+  const myJobs = await db
+    .select()
+    .from(jobsCurrent)
+    .where(eq(jobsCurrent.owner, owner));
 
-    const myJobs = await db
-      .select()
-      .from(jobsCurrent)
-      .where(eq(jobsCurrent.owner, owner));
-
+  if (!latest) {
     return {
-      updatedAt: latest.recordedAt.toISOString(),
-      totalSlots: latest.totalSlots,
-      usedSlots: latest.usedSlots,
-      freeSlots: latest.freeSlots,
-      runningJobs: latest.runningJobs,
-      queuedJobs: latest.queuedJobs,
-      failedJobs: latest.failedJobs,
-      holdJobs: latest.holdJobs,
-      healthStatus: latest.healthStatus,
-      offlineNodeCount: latest.offlineNodeCount,
+      updatedAt: new Date(0).toISOString(),
+      totalSlots: 0,
+      usedSlots: 0,
+      freeSlots: 0,
+      runningJobs: 0,
+      queuedJobs: 0,
+      failedJobs: 0,
+      holdJobs: 0,
+      healthStatus: "down",
+      offlineNodeCount: 0,
       myActiveJobsCount: myJobs.length,
     };
-  }, async () => {
-    const myActiveJobs = await getActiveJobs(owner);
-    return {
-      ...DASHBOARD_SUMMARY,
-      myActiveJobsCount: myActiveJobs.length,
-    };
-  });
+  }
+
+  return {
+    updatedAt: latest.recordedAt.toISOString(),
+    totalSlots: latest.totalSlots,
+    usedSlots: latest.usedSlots,
+    freeSlots: latest.freeSlots,
+    runningJobs: latest.runningJobs,
+    queuedJobs: latest.queuedJobs,
+    failedJobs: latest.failedJobs,
+    holdJobs: latest.holdJobs,
+    healthStatus: latest.healthStatus,
+    offlineNodeCount: latest.offlineNodeCount,
+    myActiveJobsCount: myJobs.length,
+  };
 }
 
 export async function getActiveJobs(owner: string) {
-  return withDbFallback(async () => {
-    const db = createDb();
-    const rows = await db
-      .select()
-      .from(jobsCurrent)
-      .where(eq(jobsCurrent.owner, owner))
-      .orderBy(desc(jobsCurrent.submittedAt));
+  const db = createDb();
+  const rows = await db
+    .select()
+    .from(jobsCurrent)
+    .where(eq(jobsCurrent.owner, owner))
+    .orderBy(desc(jobsCurrent.submittedAt));
 
-    return rows.map(mapCurrentJob);
-  }, () => ACTIVE_JOBS.filter((job) => job.owner === owner));
+  return rows.map(mapCurrentJob);
 }
 
 export async function getActiveJobsPreview(owner: string) {
@@ -158,16 +146,14 @@ export async function getJobHistory(owner: string, input: JobsFilterInput = {}):
   const preset = input.preset ?? "30d";
   const since = new Date(Date.now() - presetDays(preset) * 24 * 60 * 60 * 1000);
 
-  const items = await withDbFallback(async () => {
-    const db = createDb();
-    const rows = await db
-      .select()
-      .from(jobsHistory)
-      .where(and(eq(jobsHistory.owner, owner), gte(jobsHistory.finishedAt, since)))
-      .orderBy(desc(jobsHistory.finishedAt));
+  const db = createDb();
+  const rows = await db
+    .select()
+    .from(jobsHistory)
+    .where(and(eq(jobsHistory.owner, owner), gte(jobsHistory.finishedAt, since)))
+    .orderBy(desc(jobsHistory.finishedAt));
 
-    return rows.map(mapHistoryJob);
-  }, () => JOB_HISTORY.filter((job) => job.owner === owner));
+  const items = rows.map(mapHistoryJob);
 
   const filtered = items.filter((job) => {
     const finishedDate = new Date(job.finishedAt ?? job.submittedAt);
@@ -191,42 +177,36 @@ export async function getJobHistory(owner: string, input: JobsFilterInput = {}):
 }
 
 export async function getHistory(owner: string, preset: HistoryPreset): Promise<HistoryBucket[]> {
-  return withDbFallback(async () => {
-    const db = createDb();
-    const since = sinceForPreset(preset);
+  const db = createDb();
+  const since = sinceForPreset(preset);
 
-    if (preset === "24h" || preset === "7d") {
-      const rows = await db
-        .select()
-        .from(userJobHourly)
-        .where(and(eq(userJobHourly.owner, owner), gte(userJobHourly.bucketStart, since)))
-        .orderBy(userJobHourly.bucketStart);
-
-      if (!rows.length) throw new Error("No hourly rollups");
-
-      return rows.map((row) => ({
-        label: formatHourlyLabel(row.bucketStart, preset),
-        submittedCount: row.submittedCount,
-        startedCount: row.startedCount,
-        finishedCount: row.finishedCount,
-        failedCount: row.failedCount,
-      }));
-    }
-
+  if (preset === "24h" || preset === "7d") {
     const rows = await db
       .select()
-      .from(userJobDaily)
-      .where(and(eq(userJobDaily.owner, owner), gte(userJobDaily.bucketDate, since)))
-      .orderBy(userJobDaily.bucketDate);
-
-    if (!rows.length) throw new Error("No daily rollups");
+      .from(userJobHourly)
+      .where(and(eq(userJobHourly.owner, owner), gte(userJobHourly.bucketStart, since)))
+      .orderBy(userJobHourly.bucketStart);
 
     return rows.map((row) => ({
-      label: formatDailyLabel(row.bucketDate, preset),
+      label: formatHourlyLabel(row.bucketStart, preset),
       submittedCount: row.submittedCount,
       startedCount: row.startedCount,
       finishedCount: row.finishedCount,
       failedCount: row.failedCount,
     }));
-  }, () => HISTORY_BY_PRESET[preset]);
+  }
+
+  const rows = await db
+    .select()
+    .from(userJobDaily)
+    .where(and(eq(userJobDaily.owner, owner), gte(userJobDaily.bucketDate, since)))
+    .orderBy(userJobDaily.bucketDate);
+
+  return rows.map((row) => ({
+    label: formatDailyLabel(row.bucketDate, preset),
+    submittedCount: row.submittedCount,
+    startedCount: row.startedCount,
+    finishedCount: row.finishedCount,
+    failedCount: row.failedCount,
+  }));
 }

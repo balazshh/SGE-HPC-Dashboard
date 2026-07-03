@@ -4,16 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:server": "bun --watch src/server/index.ts",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "check:parsers": "bun scripts/check-parsers.mjs",
-    "collect:live": "bun scripts/collect-live.mjs",
-    "collect:history": "bun scripts/collect-history.mjs",
-    "collect:rollups": "bun scripts/aggregate-rollups.mjs",
-    "cleanup:data": "bun scripts/cleanup-old-data.mjs",
     "start": "bun src/server/index.ts"
   },
   "dependencies": {
@@ -34,7 +25,6 @@
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^5.0.2",
     "bun-types": "^1.2.18",
-    "drizzle-kit": "^0.31.4",
     "typescript": "^5.8.3",
     "vite": "^7.0.4"
   }

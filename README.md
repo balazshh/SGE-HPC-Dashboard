@@ -1,242 +1,40 @@
 # HPC Dashboard v2
 
-Single-repo HPC dashboard: React SPA + Bun API server + optional MySQL persistence.
+Production-only HPC dashboard.
 
-The app runs in two modes:
+What stays in this repo:
+- Bun server
+- React client
+- MySQL schema
+- HPC-side shell collectors
+- deploy docs for the VM setup
 
-- **demo mode**: no Entra, no MySQL, fixture data only
-- **production mode**: Entra auth enabled, shell collectors running on the HPC side write into MySQL, reverse proxy in front
+What does not happen here:
+- no direct HPC connection from the web VM
+- no local fixture collectors
+- no mock data path for production reads
 
-## What is in the repo
+## Runtime shape
 
-- `src/client` — SPA pages, routing, auth UI
-- `src/server` — Bun server, tRPC routes, auth, data access
-- `src/shared` — shared types and mock data
-- `scripts` — Bun collector/maintenance jobs
-- `drizzle` — SQL used to create the database schema
-- `docs/deploy` — small deploy helpers
-- `docs/adr` — architecture decisions
+- web app checkout: `/d/hpc-dashboard-test`
+- Bun app: `127.0.0.1:3001`
+- Nginx: TLS + reverse proxy
+- HPC-side collectors: run where `qstat` and `qacct` already work
+- MySQL: shared storage between collectors and web app
 
-## Requirements
-
-### Local demo
-
-- Bun 1.2+
-
-### Full production
+## Required components
 
 - Bun 1.2+
 - MySQL 8+
-- reverse proxy such as Nginx
-- optional Microsoft Entra app registration
-- access to SGE commands if you want real HPC data:
+- Nginx
+- SGE commands on the collector host:
   - `qstat -g c`
   - `qstat -u '*'`
   - `qacct`
 
-## Quick start
+## Web VM deployment
 
-### Local demo mode
-
-```bash
-cp .env.example .env
-bun install
-bun run dev:server
-```
-
-In a second terminal:
-
-```bash
-bun run dev
-```
-
-Open `http://localhost:5173`.
-
-Notes:
-
-- API server runs on `PORT` from `.env`.
-- Vite proxies `/api` to the Bun server.
-- If Entra is not configured, the login page uses the demo sign-in form.
-- If MySQL is not available, the app falls back to bundled mock data.
-
-### Local production-like run
-
-```bash
-cp .env.example .env
-bun install
-bun run build
-bun run start
-```
-
-Open `http://localhost:3001` unless you changed `PORT`.
-
-## Package management
-
-This repo uses **Bun only**.
-
-Common commands:
-
-```bash
-bun install
-bun run dev
-bun run dev:server
-bun run build
-bun run start
-bun run check:parsers
-bun run collect:live
-bun run collect:history
-bun run collect:rollups
-bun run cleanup:data
-```
-
-## Environment
-
-Copy `.env.example` to `.env` and set what you need.
-
-### Core app
-
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `APP_BASE_URL` | yes | Public base URL used by auth callbacks |
-| `PORT` | yes | Bun server port |
-| `BETTER_AUTH_SECRET` | only with Entra | Better Auth secret |
-
-### Database
-
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `DB_WRITE` | no | `1` enables collector writes, `0` keeps dry-run behavior |
-| `DB_HOST` | only with MySQL | MySQL host |
-| `DB_PORT` | only with MySQL | MySQL port |
-| `DB_NAME` | only with MySQL | Database name |
-| `DB_USER` | only with MySQL | Database user |
-| `DB_PASSWORD` | only with MySQL | Database password |
-
-### Entra
-
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `ENTRA_CLIENT_ID` | only with Entra | OAuth client id |
-| `ENTRA_TENANT_ID` | only with Entra | Entra tenant id |
-| `ENTRA_CLIENT_SECRET` | only with Entra | OAuth client secret |
-
-### HPC collectors
-
-These variables are mainly for the local Bun test collectors. Real production collection should use the shell scripts under `scripts/hpc/` on the HPC side.
-
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `QSTAT_CLUSTER_COMMAND` | no | Real cluster summary command |
-| `QSTAT_JOBS_COMMAND` | no | Real active jobs command |
-| `QACCT_COMMAND` | no | Real accounting/history command |
-
-If the HPC command variables are empty, the local Bun collectors use sample fixture files.
-
-## Database setup
-
-1. Create a MySQL database.
-2. Create a user with read/write access to that database.
-3. Set the `DB_*` variables in `.env`.
-4. Apply `drizzle/0000_initial.sql`.
-
-Example:
-
-```sql
-CREATE DATABASE hpc_dashboard CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'hpc_dashboard'@'%' IDENTIFIED BY 'change-me';
-GRANT ALL PRIVILEGES ON hpc_dashboard.* TO 'hpc_dashboard'@'%';
-FLUSH PRIVILEGES;
-```
-
-Then load the schema:
-
-```bash
-mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p "$DB_NAME" < drizzle/0000_initial.sql
-```
-
-## Authentication modes
-
-### Demo mode
-
-Used automatically when Entra env variables are missing.
-
-- login is handled by `/api/demo-login`
-- a demo session cookie is issued by the Bun server
-- good for local testing and UI review
-
-### Entra mode
-
-Enabled when all of these are set:
-
-- `BETTER_AUTH_SECRET`
-- `ENTRA_CLIENT_ID`
-- `ENTRA_CLIENT_SECRET`
-- `ENTRA_TENANT_ID`
-
-Redirect URI:
-
-```txt
-https://<your-domain>/api/auth/oauth2/callback/microsoft-entra-id
-```
-
-Set `APP_BASE_URL` to the same public URL users will open in the browser.
-
-## Collector jobs
-
-There are two collector paths:
-
-- `scripts/hpc/*.sh` — production path, runs on the HPC side and writes directly to MySQL
-- `scripts/*.mjs` — local/dev path, useful for parser checks and fixture-based testing
-
-The web app VM does not need direct HPC access. It only needs MySQL access.
-
-### Production collector flow
-
-1. Put a checkout of this repo on a machine where `qstat` and `qacct` already work.
-2. Copy `scripts/hpc/collector.env.example` to `scripts/hpc/collector.env`.
-3. Set the app MySQL credentials there.
-4. Run the shell collectors from cron.
-5. The app reads the loaded rows from MySQL.
-
-Shell collectors:
-
-```bash
-cp scripts/hpc/collector.env.example scripts/hpc/collector.env
-vi scripts/hpc/collector.env
-./scripts/hpc/collect-live.sh
-./scripts/hpc/collect-history.sh
-./scripts/hpc/aggregate-rollups.sh
-./scripts/hpc/cleanup-old-data.sh
-```
-
-### Validate parsers
-
-```bash
-bun run check:parsers
-```
-
-### Local/dev collector commands
-
-```bash
-DB_WRITE=1 bun run collect:live
-DB_WRITE=1 bun run collect:history
-DB_WRITE=1 bun run collect:rollups
-DB_WRITE=1 bun run cleanup:data
-```
-
-Cron examples for the real HPC-side shell collectors live in `docs/deploy/cron.md`.
-
-## Production deployment
-
-This is the recommended deployment shape for the current Bosch test VM setup:
-
-- app checkout lives under `/d/hpc-dashboard-test`
-- Bun server listens on `127.0.0.1:3001`
-- Nginx terminates TLS and proxies to Bun
-- the web VM does **not** connect to HPC directly
-- shell collectors run on the HPC side and write into MySQL
-
-### 1. Deploy the app on the VM
+### 1. Checkout
 
 ```bash
 cd /d
@@ -245,7 +43,7 @@ cd /d/hpc-dashboard-test
 cp .env.example .env
 ```
 
-Set `/d/hpc-dashboard-test/.env` like this:
+### 2. Configure `.env`
 
 ```env
 APP_BASE_URL=https://bp-hpc-dashboard-test.emea.bosch.com
@@ -265,22 +63,18 @@ ENTRA_CLIENT_SECRET=
 ```
 
 Notes:
+- `DB_WRITE=0` on the web VM is fine; this VM only reads
+- if Entra is unset, demo auth still works
+- real dashboard data depends on the HPC-side collectors filling MySQL
 
-- `DB_WRITE=0` is fine on the web VM. This VM only reads MySQL.
-- if Entra is not configured, the app stays in demo-auth mode
-- real HPC data still appears as long as the HPC-side collectors write into MySQL
-
-### 2. Install dependencies and build
+### 3. Build
 
 ```bash
-cd /d/hpc-dashboard-test
 bun install
 bun run build
 ```
 
-This creates `dist/`, which the Bun server serves directly.
-
-### 3. Run under systemd
+### 4. systemd service
 
 Create `/etc/systemd/system/hpc-dashboard.service`:
 
@@ -303,13 +97,13 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-If Bun is not in `/usr/local/bin/bun`, check it first:
+If needed:
 
 ```bash
 which bun
 ```
 
-Then enable the service:
+Then:
 
 ```bash
 systemctl daemon-reload
@@ -317,7 +111,7 @@ systemctl enable --now hpc-dashboard
 systemctl status hpc-dashboard
 ```
 
-### 4. Nginx reverse proxy on the VM
+### 5. Nginx
 
 Use `/etc/nginx/conf.d/bp-hpc-dashboard-test.conf`:
 
@@ -347,144 +141,86 @@ server {
 }
 ```
 
-Then reload Nginx:
+Reload:
 
 ```bash
 nginx -t
 systemctl reload nginx
 ```
 
-Notes:
+Do not add a separate `/assets` alias. Bun serves `dist/` itself.
 
-- do not use a separate `/assets` alias for this app; Bun already serves `dist/`
-- ignore unrelated terminal websocket routes from other configs unless you really need them here
+## HPC-side collectors
 
-### 5. HPC-side collectors
+Run these on the HPC side, not on the web VM.
 
-This VM does not need direct SSH or scheduler access.
-Run the shell collectors on the HPC side: login node, submit host, or any machine where `qstat` and `qacct` already work.
+### 1. Collector env
 
 ```bash
 cp scripts/hpc/collector.env.example scripts/hpc/collector.env
 vi scripts/hpc/collector.env
+```
+
+Example:
+
+```env
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=hpc_dashboard
+DB_USER=hpc_dashboard
+DB_PASSWORD=change-me
+
+QSTAT_CLUSTER_COMMAND=qstat -g c
+QSTAT_JOBS_COMMAND=qstat -u '*'
+QACCT_COMMAND=qacct
+```
+
+### 2. Run collectors
+
+```bash
 ./scripts/hpc/collect-live.sh
 ./scripts/hpc/collect-history.sh
 ./scripts/hpc/aggregate-rollups.sh
 ./scripts/hpc/cleanup-old-data.sh
 ```
 
-Those scripts write directly into MySQL. The web app only reads the resulting tables.
+### 3. Cron
 
-Cron examples for the HPC side live in `docs/deploy/cron.md`.
+See `docs/deploy/cron.md`.
 
-### 6. Container deployment
+## Database setup
 
-A Bun-only container build is still available in `Containerfile`, but for the current VM the `systemd + nginx` setup above is the intended path.
+Apply:
 
-## Recommended production checklist
+```bash
+mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p "$DB_NAME" < drizzle/0000_initial.sql
+```
 
-- [ ] app checkout exists at `/d/hpc-dashboard-test`
-- [ ] `APP_BASE_URL=https://bp-hpc-dashboard-test.emea.bosch.com`
-- [ ] `PORT=3001`
-- [ ] Bun service is running under systemd
-- [ ] Nginx proxies `443 -> 127.0.0.1:3001`
-- [ ] Entra secrets are present if SSO is required
-- [ ] MySQL schema from `drizzle/0000_initial.sql` is applied
-- [ ] `scripts/hpc/collector.env` exists on the HPC side
-- [ ] MySQL is reachable from the HPC-side collector host
-- [ ] collector cron jobs are installed on the HPC side
-- [ ] reverse proxy forwards `Host` and `X-Forwarded-Proto`
-- [ ] health check `/api/health` is monitored
-- [ ] `.env` is not committed
-
-## Health checks and smoke tests
-
-Health endpoint:
+## Health check
 
 ```bash
 curl http://127.0.0.1:3001/api/health
 ```
 
-Expected response:
+Expected shape:
 
 ```json
 {"ok":true,"authMode":"demo"}
 ```
 
-Basic smoke test:
+## Production checklist
 
-1. open the site
-2. sign in with the demo form if Entra is off
-3. verify `/dashboard`, `/jobs`, and `/history` load
-4. if MySQL is enabled, run one collector and refresh the pages
+- [ ] repo exists at `/d/hpc-dashboard-test`
+- [ ] `APP_BASE_URL=https://bp-hpc-dashboard-test.emea.bosch.com`
+- [ ] Bun service is up
+- [ ] Nginx proxies to `127.0.0.1:3001`
+- [ ] MySQL schema is loaded
+- [ ] HPC-side `collector.env` is filled
+- [ ] HPC-side cron is installed
+- [ ] web VM can reach MySQL
+- [ ] collectors can reach MySQL
 
-## Repo cleanup already applied
-
-Removed from the runtime path:
-
-- legacy lockfile usage
-- old package-manager commands in docs and container build
-- shell wrapper collector scripts replaced by direct Bun entrypoints
-- committed build output is no longer needed in git
-
-## Troubleshooting
-
-### App says frontend build not found
-
-Run:
-
-```bash
-bun run build
-```
-
-### App starts but pages show fixture data
-
-That is expected unless both are true:
-
-- MySQL is reachable
-- collector jobs have written real rows
-
-### Entra login does not redirect back correctly
-
-Usually one of these is wrong:
-
-- `APP_BASE_URL`
-- Entra redirect URI
-- proxy headers
-
-### Collector commands fail on the HPC side
-
-Test them manually on the machine running the shell collectors:
-
-```bash
-qstat -g c
-qstat -u '*'
-qacct
-```
-
-Then fix `scripts/hpc/collector.env` and rerun the shell collectors.
-
-### Site opens but still shows fixture data
-
-That means the app could not read real rows from MySQL yet.
-Check these first:
-
-- `jobs_current` has rows
-- `cluster_snapshots` has rows
-- `jobs_history` has rows
-- HPC-side cron actually ran
-- the web VM can reach the MySQL server
-
-### Nginx serves errors but Bun health is fine
-
-Usually one of these is wrong:
-
-- wrong `server_name`
-- wrong TLS cert path
-- nginx config still contains unrelated routes
-- proxy target is not `127.0.0.1:3001`
-
-## File map
+## Repo layout
 
 ```txt
 src/
@@ -492,10 +228,8 @@ src/
   server/
   shared/
 scripts/
-  fixtures/
-  lib/
+  hpc/
 docs/
-  adr/
   deploy/
 drizzle/
 ```

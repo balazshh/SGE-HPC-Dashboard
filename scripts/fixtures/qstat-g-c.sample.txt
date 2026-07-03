@@ -1,3 +1,0 @@
-CLUSTER QUEUE                   CQLOAD   USED    RES  AVAIL  TOTAL aoACDS  cdsuE
---------------------------------------------------------------------------------
-all.q                             0.75    1536      0    512   2048      2      0
