@@ -7,6 +7,7 @@ What stays in this repo:
 - React client
 - MySQL schema
 - HPC-side shell collectors
+- Docker image build for the web app
 - deploy docs for the VM setup
 
 What does not happen here:
@@ -16,15 +17,15 @@ What does not happen here:
 
 ## Runtime shape
 
-- web app checkout: `/d/hpc-dashboard-test`
-- Bun app: `127.0.0.1:3001`
-- Nginx: TLS + reverse proxy
+- app source checkout: `/d/hpc-dashboard-test`
+- web app runs in Docker on port `3001`
+- Nginx: TLS + reverse proxy to `127.0.0.1:3001`
 - HPC-side collectors: run where `qstat` and `qacct` already work
 - MySQL: shared storage between collectors and web app
 
 ## Required components
 
-- Bun 1.2+
+- Docker
 - MySQL 8+
 - Nginx
 - SGE commands on the collector host:
@@ -67,48 +68,29 @@ Notes:
 - if Entra is unset, demo auth still works
 - real dashboard data depends on the HPC-side collectors filling MySQL
 
-### 3. Build
+### 3. Build the Docker image
 
 ```bash
-bun install
-bun run build
+cd /d/hpc-dashboard-test
+docker build -t hpc-dashboard-test -f Containerfile .
 ```
 
-### 4. systemd service
-
-Create `/etc/systemd/system/hpc-dashboard.service`:
-
-```ini
-[Unit]
-Description=HPC Dashboard
-After=network.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/d/hpc-dashboard-test
-Environment=NODE_ENV=production
-EnvironmentFile=/d/hpc-dashboard-test/.env
-ExecStart=/usr/local/bin/bun src/server/index.ts
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-If needed:
+### 4. Run the container
 
 ```bash
-which bun
+docker rm -f hpc-dashboard-test 2>/dev/null || true
+docker run -d \
+  --name hpc-dashboard-test \
+  --restart unless-stopped \
+  --env-file /d/hpc-dashboard-test/.env \
+  -p 127.0.0.1:3001:3001 \
+  hpc-dashboard-test
 ```
 
-Then:
+Quick check:
 
 ```bash
-systemctl daemon-reload
-systemctl enable --now hpc-dashboard
-systemctl status hpc-dashboard
+curl http://127.0.0.1:3001/api/health
 ```
 
 ### 5. Nginx
@@ -149,6 +131,21 @@ systemctl reload nginx
 ```
 
 Do not add a separate `/assets` alias. Bun serves `dist/` itself.
+
+### 6. Updating the container
+
+```bash
+cd /d/hpc-dashboard-test
+git pull
+docker build -t hpc-dashboard-test -f Containerfile .
+docker rm -f hpc-dashboard-test
+docker run -d \
+  --name hpc-dashboard-test \
+  --restart unless-stopped \
+  --env-file /d/hpc-dashboard-test/.env \
+  -p 127.0.0.1:3001:3001 \
+  hpc-dashboard-test
+```
 
 ## HPC-side collectors
 
@@ -212,7 +209,7 @@ Expected shape:
 
 - [ ] repo exists at `/d/hpc-dashboard-test`
 - [ ] `APP_BASE_URL=https://bp-hpc-dashboard-test.emea.bosch.com`
-- [ ] Bun service is up
+- [ ] Docker container `hpc-dashboard-test` is up
 - [ ] Nginx proxies to `127.0.0.1:3001`
 - [ ] MySQL schema is loaded
 - [ ] HPC-side `collector.env` is filled
