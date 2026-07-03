@@ -65,17 +65,44 @@ ENTRA_CLIENT_SECRET=
 
 Notes:
 - `DB_WRITE=0` on the web VM is fine; this VM only reads
-- if Entra is unset, demo auth still works
+- Entra SSO is mandatory; the app should not start without the Entra env values above
 - real dashboard data depends on the HPC-side collectors filling MySQL
 
-### 3. Build the Docker image
+### 3. Prepare build artifacts on the host
+
+The Docker image is built from the already-prepared app directory. That avoids fetching packages from inside the container, which is useful on restricted Bosch networks.
 
 ```bash
 cd /d/hpc-dashboard-test
+bun install
+bun run build
+```
+
+This must create:
+- `node_modules/`
+- `dist/`
+
+### 4. Build the Docker image
+
+If the VM needs an outbound proxy for Docker builds, use host networking and pass the proxy as build args:
+
+```bash
+cd /d/hpc-dashboard-test
+docker build \
+  --network=host \
+  --build-arg http_proxy=http://<proxy-host>:<proxy-port> \
+  --build-arg https_proxy=http://<proxy-host>:<proxy-port> \
+  -t hpc-dashboard-test \
+  -f Containerfile .
+```
+
+If no proxy is needed, the short form also works:
+
+```bash
 docker build -t hpc-dashboard-test -f Containerfile .
 ```
 
-### 4. Run the container
+### 5. Run the container
 
 ```bash
 docker rm -f hpc-dashboard-test 2>/dev/null || true
@@ -93,7 +120,7 @@ Quick check:
 curl http://127.0.0.1:3001/api/health
 ```
 
-### 5. Nginx
+### 6. Nginx
 
 Use `/etc/nginx/conf.d/bp-hpc-dashboard-test.conf`:
 
@@ -132,12 +159,19 @@ systemctl reload nginx
 
 Do not add a separate `/assets` alias. Bun serves `dist/` itself.
 
-### 6. Updating the container
+### 7. Updating the container
 
 ```bash
 cd /d/hpc-dashboard-test
 git pull
-docker build -t hpc-dashboard-test -f Containerfile .
+bun install
+bun run build
+docker build \
+  --network=host \
+  --build-arg http_proxy=http://<proxy-host>:<proxy-port> \
+  --build-arg https_proxy=http://<proxy-host>:<proxy-port> \
+  -t hpc-dashboard-test \
+  -f Containerfile .
 docker rm -f hpc-dashboard-test
 docker run -d \
   --name hpc-dashboard-test \
@@ -202,15 +236,18 @@ curl http://127.0.0.1:3001/api/health
 Expected shape:
 
 ```json
-{"ok":true,"authMode":"demo"}
+{"ok":true,"authMode":"entra"}
 ```
 
 ## Production checklist
 
 - [ ] repo exists at `/d/hpc-dashboard-test`
 - [ ] `APP_BASE_URL=https://bp-hpc-dashboard-test.emea.bosch.com`
+- [ ] `node_modules/` exists before `docker build`
+- [ ] `dist/` exists before `docker build`
 - [ ] Docker container `hpc-dashboard-test` is up
 - [ ] Nginx proxies to `127.0.0.1:3001`
+- [ ] `BETTER_AUTH_SECRET`, `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET`, and `ENTRA_TENANT_ID` are set
 - [ ] MySQL schema is loaded
 - [ ] HPC-side `collector.env` is filled
 - [ ] HPC-side cron is installed

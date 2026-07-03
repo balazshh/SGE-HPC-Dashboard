@@ -10,7 +10,7 @@ export type CanonicalJobState =
 
 export type FreshnessLevel = "fresh" | "warn" | "stale" | "broken";
 export type HistoryPreset = "24h" | "7d" | "30d" | "1y";
-export type AuthMode = "demo" | "entra";
+export type AuthMode = "entra";
 
 export interface SessionUser {
   name: string;
@@ -21,7 +21,6 @@ export interface SessionUser {
 export interface SessionInfo {
   user: SessionUser | null;
   authMode: AuthMode;
-  hasEntraConfigured: boolean;
 }
 
 export interface ClusterSummary {

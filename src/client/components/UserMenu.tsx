@@ -19,12 +19,7 @@ export function UserMenu() {
   }
 
   async function signOut() {
-    if (session.data?.authMode === "demo") {
-      await fetch("/api/demo-logout", { method: "POST", credentials: "include" });
-    } else {
-      await authClient.signOut();
-    }
-
+    await authClient.signOut();
     await queryClient.invalidateQueries();
     navigate({ to: "/login" });
   }

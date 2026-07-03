@@ -1,7 +1,7 @@
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 
 import { env } from "./config/env";
-import { handleAuthRequest, handleDemoLogin, handleDemoLogout, hasEntraConfigured } from "./auth";
+import { handleAuthRequest } from "./auth";
 import { createContext } from "./trpc/context";
 import { appRouter } from "./trpc/routers";
 
@@ -44,16 +44,8 @@ Bun.serve({
       return handleAuthRequest(request);
     }
 
-    if (url.pathname === "/api/demo-login" && request.method === "POST") {
-      return handleDemoLogin(request);
-    }
-
-    if (url.pathname === "/api/demo-logout" && request.method === "POST") {
-      return handleDemoLogout();
-    }
-
     if (url.pathname === "/api/health") {
-      return json({ ok: true, authMode: hasEntraConfigured ? "entra" : "demo" });
+      return json({ ok: true, authMode: "entra" });
     }
 
     if (url.pathname.startsWith("/api/")) {
