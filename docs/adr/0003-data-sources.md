@@ -23,10 +23,10 @@ Data handling rules:
 
 Collector split:
 
-- `scripts/collect-live.sh` reads `qstat`
-- `scripts/collect-history.sh` reads `qacct`
-- `scripts/aggregate-rollups.sh` builds hourly/daily rollups from history
-- `scripts/cleanup-old-data.sh` enforces retention
+- `scripts/collect-live.mjs` reads `qstat`
+- `scripts/collect-history.mjs` reads `qacct`
+- `scripts/aggregate-rollups.mjs` builds hourly/daily rollups from history
+- `scripts/cleanup-old-data.mjs` enforces retention
 
 ## Consequences
 

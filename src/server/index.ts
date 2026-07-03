@@ -22,10 +22,11 @@ function serveSpa(pathname: string) {
   const indexFile = Bun.file(`${distPath}/index.html`);
   if (indexFile.size > 0) return new Response(indexFile, { headers: { "content-type": "text/html; charset=utf-8" } });
 
-  return json({ error: "Frontend build not found. Run npm run build or use Vite on :5173." }, 404);
+  return json({ error: "Frontend build not found. Run bun run build or use Vite on :5173." }, 404);
 }
 
 Bun.serve({
+  hostname: "0.0.0.0",
   port: env.port,
   async fetch(request) {
     const url = new URL(request.url);

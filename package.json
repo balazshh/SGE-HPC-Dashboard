@@ -9,7 +9,11 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "check:parsers": "node scripts/check-parsers.mjs",
+    "check:parsers": "bun scripts/check-parsers.mjs",
+    "collect:live": "bun scripts/collect-live.mjs",
+    "collect:history": "bun scripts/collect-history.mjs",
+    "collect:rollups": "bun scripts/aggregate-rollups.mjs",
+    "cleanup:data": "bun scripts/cleanup-old-data.mjs",
     "start": "bun src/server/index.ts"
   },
   "dependencies": {
