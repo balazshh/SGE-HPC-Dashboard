@@ -1,0 +1,30 @@
+==============================================================
+qname        all.q
+hostname     node021.cluster.local
+group        users
+owner        jane.doe
+jobname      stress-postprocess
+jobnumber    739112
+account      sge
+priority     0
+qsub_time    Wed Jul  1 08:15:00 2026
+start_time   Wed Jul  1 08:19:00 2026
+end_time     Wed Jul  1 10:07:00 2026
+failed       0
+exit_status  0
+slots        8
+==============================================================
+qname        all.q
+hostname     node011.cluster.local
+group        users
+owner        jane.doe
+jobname      cooling-loop-trace
+jobnumber    738904
+account      sge
+priority     0
+qsub_time    Tue Jun 30 12:00:00 2026
+start_time   Tue Jun 30 12:06:00 2026
+end_time     Tue Jun 30 12:44:00 2026
+failed       100
+exit_status  1
+slots        4
