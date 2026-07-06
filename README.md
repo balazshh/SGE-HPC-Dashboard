@@ -91,9 +91,22 @@ This is the easiest safe path for a fresh test deploy.
 
 ## 4. Build the Docker image
 
+Without proxy:
+
 ```bash
 cd /d/hpc-dashboard-test
 docker build --network=host -t hpc-dashboard-test -f Containerfile .
+```
+
+With proxy:
+
+```bash
+cd /d/hpc-dashboard-test
+docker build --network=host \
+  --build-arg http_proxy=http://<proxy-host>:<proxy-port> \
+  --build-arg https_proxy=http://<proxy-host>:<proxy-port> \
+  -t hpc-dashboard-test \
+  -f Containerfile .
 ```
 
 ---
@@ -226,6 +239,19 @@ When you want a new version:
 cd /d/hpc-dashboard-test
 git pull
 docker build --network=host -t hpc-dashboard-test -f Containerfile .
+docker rm -f hpc-dashboard-test 2>/dev/null || true && docker run -d --name hpc-dashboard-test --env-file /d/.env -p 127.0.0.1:3001:3001 --restart unless-stopped hpc-dashboard-test
+```
+
+If you need proxy on update too:
+
+```bash
+cd /d/hpc-dashboard-test
+git pull
+docker build --network=host \
+  --build-arg http_proxy=http://<proxy-host>:<proxy-port> \
+  --build-arg https_proxy=http://<proxy-host>:<proxy-port> \
+  -t hpc-dashboard-test \
+  -f Containerfile .
 docker rm -f hpc-dashboard-test 2>/dev/null || true && docker run -d --name hpc-dashboard-test --env-file /d/.env -p 127.0.0.1:3001:3001 --restart unless-stopped hpc-dashboard-test
 ```
 
