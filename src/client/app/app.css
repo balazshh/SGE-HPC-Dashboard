@@ -517,6 +517,7 @@ th {
 
 .history-chart__label {
   font-size: 0.875rem;
+  white-space: nowrap;
 }
 
 .section-title-row .btn,
