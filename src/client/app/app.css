@@ -434,8 +434,14 @@ legend {
 
 .preset-group div {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: var(--space-unit);
+}
+
+.preset-group .btn {
+  white-space: nowrap;
+  padding-left: calc(var(--space-unit) * 2);
+  padding-right: calc(var(--space-unit) * 2);
 }
 
 .form-input {
