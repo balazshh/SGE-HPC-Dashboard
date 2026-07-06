@@ -91,6 +91,13 @@ select {
   gap: calc(var(--space-unit) * 4);
 }
 
+.site-header__inner > *,
+.site-header__left > *,
+.page-header > *,
+.section-title-row > * {
+  min-width: 0;
+}
+
 .site-header__left {
   display: flex;
   align-items: center;
@@ -202,6 +209,7 @@ h2,
 h3 {
   margin: 0;
   font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
 }
 
 h1 {
@@ -353,6 +361,7 @@ legend {
   align-items: center;
   justify-content: center;
   gap: var(--space-unit);
+  text-align: center;
 }
 
 .btn:disabled {
@@ -508,6 +517,11 @@ th {
 
 .history-chart__label {
   font-size: 0.875rem;
+}
+
+.section-title-row .btn,
+.pagination-controls .btn {
+  white-space: normal;
 }
 
 @media (max-width: 960px) {
