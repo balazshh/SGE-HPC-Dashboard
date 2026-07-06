@@ -40,14 +40,14 @@ If the collectors do not run, the dashboard will be empty.
 cd /d
 git clone https://github.com/balazshh/SGE-HPC-Dashboard.git hpc-dashboard-test
 cd /d/hpc-dashboard-test
-cp .env.example .env
+cp .env.example /d/.env
 ```
 
 ---
 
 ## 2. Fill `.env`
 
-Open `/d/hpc-dashboard-test/.env` and set real values:
+Open `/d/.env` and set real values:
 
 ```env
 APP_BASE_URL=https://your-dashboard.example.com
@@ -93,7 +93,7 @@ This is the easiest safe path for a fresh test deploy.
 
 ```bash
 cd /d/hpc-dashboard-test
-docker build -t hpc-dashboard-test -f Containerfile .
+docker build --network=host -t hpc-dashboard-test -f Containerfile .
 ```
 
 ---
@@ -101,13 +101,7 @@ docker build -t hpc-dashboard-test -f Containerfile .
 ## 5. Start the app
 
 ```bash
-docker rm -f hpc-dashboard-test 2>/dev/null || true
-docker run -d \
-  --name hpc-dashboard-test \
-  --restart unless-stopped \
-  --env-file /d/hpc-dashboard-test/.env \
-  -p 127.0.0.1:3001:3001 \
-  hpc-dashboard-test
+docker rm -f hpc-dashboard-test 2>/dev/null || true && docker run -d --name hpc-dashboard-test --env-file /d/.env -p 127.0.0.1:3001:3001 --restart unless-stopped hpc-dashboard-test
 ```
 
 Check it:
@@ -231,14 +225,8 @@ When you want a new version:
 ```bash
 cd /d/hpc-dashboard-test
 git pull
-docker build -t hpc-dashboard-test -f Containerfile .
-docker rm -f hpc-dashboard-test
-docker run -d \
-  --name hpc-dashboard-test \
-  --restart unless-stopped \
-  --env-file /d/hpc-dashboard-test/.env \
-  -p 127.0.0.1:3001:3001 \
-  hpc-dashboard-test
+docker build --network=host -t hpc-dashboard-test -f Containerfile .
+docker rm -f hpc-dashboard-test 2>/dev/null || true && docker run -d --name hpc-dashboard-test --env-file /d/.env -p 127.0.0.1:3001:3001 --restart unless-stopped hpc-dashboard-test
 ```
 
 If the app schema changes in the future, load the matching SQL before starting the new container.
