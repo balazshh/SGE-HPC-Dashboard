@@ -20,8 +20,14 @@ export function UserMenu() {
           <option key={option.value} value={option.value}>{option.label}</option>
         ))}
       </select>
-      <button className="btn btn-secondary" type="button" onClick={toggleTheme}>
-        {theme === "dark" ? t("lightMode") : t("darkMode")}
+      <button
+        className="theme-toggle"
+        type="button"
+        aria-label={theme === "dark" ? t("lightMode") : t("darkMode")}
+        title={theme === "dark" ? t("lightMode") : t("darkMode")}
+        onClick={toggleTheme}
+      >
+        <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
       </button>
     </>
   );

@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 
-export type Language = "en" | "de" | "hu" | "zh";
+export type Language = "en" | "de" | "hu";
 type Theme = "light" | "dark";
 
 const english = {
@@ -340,114 +340,6 @@ const translations = {
     deleted: "törölve",
     all: "összes",
   },
-  zh: {
-    navPrimary: "主导航",
-    navDashboard: "仪表板",
-    navJobs: "我的作业",
-    navHistory: "我的历史",
-    signIn: "登录",
-    signOut: "退出登录",
-    darkMode: "深色模式",
-    lightMode: "浅色模式",
-    language: "语言",
-    checkingSession: "正在检查会话…",
-    loadingSignIn: "正在加载登录…",
-    signInTitle: "登录",
-    signInDescription: "登录后可查看集群状态、当前作业和个人历史记录。",
-    signInWithEntra: "使用 Microsoft Entra ID 登录",
-    loadingDashboard: "正在加载仪表板…",
-    failedDashboard: "无法加载仪表板。",
-    dashboard: "仪表板",
-    dashboardLede: "实时状态来自 qstat。时间戳以 UTC 存储，并在这里按 Europe/Budapest 显示。",
-    lastUpdated: "最后更新",
-    liveFeedHealthy: "实时数据正常",
-    updateDelayed: "更新延迟",
-    dataIsStale: "数据已过期",
-    collectorLooksBroken: "采集器似乎有问题",
-    freshnessBanner: "{label}。上次采集器更新时间：{time}。",
-    freshnessThresholds: "5 / 15 / 60 分钟阈值",
-    clusterUtilization: "集群利用率",
-    usedOfTotalSlots: "已用 {used} / 总计 {total} 个 slot",
-    runningJobs: "运行中的作业",
-    liveSchedulerCount: "调度器实时计数",
-    queuedJobs: "排队作业",
-    waitingInSchedulerQueue: "正在调度队列中等待",
-    failedJobs: "失败作业",
-    schedulerErrorInterpretation: "显式调度器错误/失败解释",
-    jobsOnHold: "挂起作业",
-    holdStatesOnly: "仅 hold 状态",
-    myActiveJobs: "我的活跃作业",
-    previewFromCurrentJobs: "来自当前作业的预览",
-    health: "健康状况",
-    clusterHealthSummary: "集群健康摘要",
-    offlineNodes: "离线节点",
-    freeSlots: "空闲 slot",
-    healthRule: "健康规则",
-    healthRuleText: "Healthy：调度器可访问。Degraded：部分节点离线。Down：调度器查询失败。",
-    capacity: "容量",
-    utilizationInUse: "当前有 {percent}% 的集群 slot 正在使用。",
-    myJobs: "我的作业",
-    activeJobsPreview: "活跃作业预览",
-    openMyJobs: "打开我的作业",
-    jobId: "作业 ID",
-    name: "名称",
-    state: "状态",
-    submittedAt: "提交时间",
-    startedAt: "开始时间",
-    finishedAt: "完成时间",
-    noActiveJobsRightNow: "你当前没有活跃作业。",
-    loadingJobs: "正在加载作业…",
-    failedJobsPage: "无法加载作业。",
-    myJobsTitle: "我的作业",
-    activeJobsAndHistory: "活跃作业和个人历史",
-    jobsPageLede: "实时作业和 1 年历史分开显示。筛选项保持简单：搜索、状态、时间范围、分页。",
-    activeJobs: "活跃作业",
-    currentSchedulerView: "当前调度器视图",
-    activeJobsCount: "{count} 个活跃作业",
-    noActiveJobsOnCluster: "集群中没有活跃作业。",
-    pastJobs: "历史作业",
-    personalJobHistory: "1 年个人作业历史",
-    search: "搜索",
-    searchPlaceholder: "作业 ID 或名称",
-    datePreset: "时间范围",
-    noJobsMatched: "没有作业匹配所选筛选条件。",
-    showingJobs: "显示 {total} 个作业中的 {shown} 个",
-    previous: "上一页",
-    page: "第",
-    next: "下一页",
-    loadingHistory: "正在加载历史…",
-    failedHistory: "无法加载历史。",
-    myHistory: "我的历史",
-    personalHistoricalTrends: "个人历史趋势",
-    historyPageLede: "短时间范围使用按小时汇总。较长时间范围切换为按天汇总，以保持页面可读。",
-    range: "范围",
-    submitted: "已提交",
-    started: "已开始",
-    finished: "已完成",
-    failed: "失败",
-    acrossPreset: "在 {preset} 内",
-    jobsEnteringExecution: "进入执行的作业",
-    completedSuccessfully: "成功完成",
-    explicitFailuresOnly: "仅显式失败",
-    trendChart: "趋势图",
-    finishedVsFailedJobs: "完成作业与失败作业",
-    preset: "预设",
-    barChartLabel: "{preset} 的完成作业与失败作业柱状图",
-    pageNotFound: "页面未找到",
-    pageNotFoundLede: "使用主导航返回仪表板、作业或历史页面。",
-    backToDashboard: "返回仪表板",
-    healthy: "healthy",
-    degraded: "degraded",
-    down: "down",
-    queued: "排队",
-    running: "运行中",
-    hold: "挂起",
-    suspended: "暂停",
-    error: "错误",
-    finishedState: "已完成",
-    deleted: "已删除",
-    all: "全部",
-  },
 } satisfies Record<Language, Record<TranslationKey, string>>;
 
 const statusKeys = {
@@ -475,7 +367,6 @@ export const languageOptions = [
   { value: "en", label: "English" },
   { value: "de", label: "Deutsch" },
   { value: "hu", label: "Magyar" },
-  { value: "zh", label: "中文" },
 ] as const;
 
 function fill(template: string, values?: Record<string, string | number>) {
@@ -502,7 +393,10 @@ interface UiContextValue {
 const UiContext = createContext<UiContextValue | null>(null);
 
 export function UiProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>(() => readStored("language", "en"));
+  const [language, setLanguage] = useState<Language>(() => {
+    const language = readStored("language", "en");
+    return languageOptions.some((option) => option.value === language) ? language as Language : "en";
+  });
   const [theme, setTheme] = useState<Theme>(() => readStored("theme", "light"));
 
   useEffect(() => {
