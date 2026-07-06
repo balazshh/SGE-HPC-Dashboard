@@ -64,11 +64,28 @@ ENTRA_CLIENT_SECRET=
 ```
 
 Notes:
-- `DB_WRITE=0` on the web VM is fine; this VM only reads
 - Entra SSO is mandatory; the app should not start without the Entra env values above
+- the web VM still writes auth/session rows during login, even if dashboard data itself is read-only
 - real dashboard data depends on the HPC-side collectors filling MySQL
 
-### 3. Build the Docker image
+### 3. One-time database reset and schema load
+
+If this environment ever ran an older version of the app, reset the test database once before the first login. This avoids schema drift such as a missing `user.hpc_username` column.
+
+```bash
+mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p <<SQL
+DROP DATABASE IF EXISTS \`${DB_NAME}\`;
+CREATE DATABASE \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+SQL
+```
+
+```bash
+mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p "$DB_NAME" < drizzle/0000_initial.sql
+```
+
+This is the official one-time deployment path for a fresh test environment. Do this once; after that, keep the database schema aligned with the app on deploy.
+
+### 4. Build the Docker image
 
 The container builds the app itself. If the VM needs an outbound proxy for Docker builds, use host networking and pass the proxy as build args:
 
@@ -88,7 +105,7 @@ If no proxy is needed, the short form also works:
 docker build -t hpc-dashboard-test -f Containerfile .
 ```
 
-### 4. Run the container
+### 5. Run the container
 
 ```bash
 docker rm -f hpc-dashboard-test 2>/dev/null || true
@@ -106,7 +123,7 @@ Quick check:
 curl http://127.0.0.1:3001/api/health
 ```
 
-### 5. Nginx
+### 6. Nginx
 
 Use `/etc/nginx/conf.d/bp-hpc-dashboard-test.conf`:
 
@@ -145,7 +162,7 @@ systemctl reload nginx
 
 Do not add a separate `/assets` alias. Bun serves `dist/` itself.
 
-### 6. Updating the container
+### 7. Updating the container
 
 ```bash
 cd /d/hpc-dashboard-test
@@ -205,11 +222,9 @@ See `docs/deploy/cron.md`.
 
 ## Database setup
 
-Apply:
+The one-time test deployment path is to recreate the database and load `drizzle/0000_initial.sql` before first use.
 
-```bash
-mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p "$DB_NAME" < drizzle/0000_initial.sql
-```
+For future app changes, schema updates must ship with matching SQL migrations and be applied before starting the new container. If the schema and app drift apart again, login and API queries can fail even when the container itself is healthy.
 
 ## Health check
 
@@ -227,6 +242,7 @@ Expected shape:
 
 - [ ] repo exists at `/d/hpc-dashboard-test`
 - [ ] `APP_BASE_URL=https://bp-hpc-dashboard-test.emea.bosch.com`
+- [ ] test database was recreated once and `drizzle/0000_initial.sql` was loaded
 - [ ] Docker image builds successfully inside the container
 - [ ] Docker container `hpc-dashboard-test` is up
 - [ ] Nginx proxies to `127.0.0.1:3001`
