@@ -6,36 +6,35 @@ export function useApi<T>(path: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
     setData(null);
     setError(null);
     setLoading(true);
 
-    fetch(path, { credentials: "include" })
-      .then(async (response) => {
+    (async () => {
+      try {
+        const response = await fetch(path, {
+          credentials: "include",
+          signal: controller.signal,
+        });
+
         if (!response.ok) {
           const body = await response.json().catch(() => null) as { error?: string } | null;
           throw new Error(body?.error ?? `Request failed: ${response.status}`);
         }
 
-        return response.json() as Promise<T>;
-      })
-      .then((nextData) => {
-        if (!cancelled) setData(nextData);
-      })
-      .catch((nextError: unknown) => {
-        if (!cancelled) {
+        setData(await response.json() as T);
+      } catch (nextError) {
+        if (!(nextError instanceof DOMException && nextError.name === "AbortError")) {
           setError(nextError instanceof Error ? nextError.message : "Request failed");
         }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    })();
 
-    return () => {
-      cancelled = true;
-    };
+    return () => controller.abort();
   }, [path]);
 
   return { data, error, loading };

@@ -5,7 +5,6 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  redirect,
 } from "@tanstack/react-router";
 
 import { BoschLogo } from "../components/BoschLogo";
@@ -63,14 +62,6 @@ const loginRoute = createRoute({
   component: LoginPage,
 });
 
-const legacyDashboardRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/dashboard",
-  beforeLoad: () => {
-    throw redirect({ to: "/" });
-  },
-});
-
 const jobsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/jobs",
@@ -86,7 +77,6 @@ const historyRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   dashboardRoute,
   loginRoute,
-  legacyDashboardRoute,
   jobsRoute,
   historyRoute,
 ]);

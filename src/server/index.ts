@@ -27,8 +27,9 @@ function readInt(value: string | null, fallback: number, min: number, max: numbe
   return Math.min(max, Math.max(min, parsed));
 }
 
-async function requireUser(request: Request) {
-  return (await getSessionInfo(request)).user;
+async function withUser(request: Request, run: (hpcUsername: string) => Promise<Response> | Response) {
+  const user = (await getSessionInfo(request)).user;
+  return user ? run(user.hpcUsername) : json({ error: "Authentication required" }, 401);
 }
 
 function serveSpa(pathname: string) {
@@ -61,47 +62,39 @@ Bun.serve({
     }
 
     if (url.pathname === "/api/dashboard/summary") {
-      const user = await requireUser(request);
-      if (!user) return json({ error: "Authentication required" }, 401);
-      return json(await getDashboardSummary(user.hpcUsername));
+      return withUser(request, async (hpcUsername) => json(await getDashboardSummary(hpcUsername)));
     }
 
     if (url.pathname === "/api/dashboard/jobs-preview") {
-      const user = await requireUser(request);
-      if (!user) return json({ error: "Authentication required" }, 401);
-      return json(await getActiveJobsPreview(user.hpcUsername));
+      return withUser(request, async (hpcUsername) => json(await getActiveJobsPreview(hpcUsername)));
     }
 
     if (url.pathname === "/api/jobs/active") {
-      const user = await requireUser(request);
-      if (!user) return json({ error: "Authentication required" }, 401);
-      return json(await getActiveJobs(user.hpcUsername));
+      return withUser(request, async (hpcUsername) => json(await getActiveJobs(hpcUsername)));
     }
 
     if (url.pathname === "/api/jobs/history") {
-      const user = await requireUser(request);
-      if (!user) return json({ error: "Authentication required" }, 401);
+      return withUser(request, async (hpcUsername) => {
+        const state = url.searchParams.get("state");
+        const preset = url.searchParams.get("preset");
+        const input: JobsFilterInput = {
+          query: url.searchParams.get("query")?.trim() || undefined,
+          state: state && jobStates.includes(state) ? state as JobsFilterInput["state"] : undefined,
+          preset: preset && jobPresets.includes(preset) ? preset as JobsFilterInput["preset"] : undefined,
+          page: readInt(url.searchParams.get("page"), 1, 1, Number.MAX_SAFE_INTEGER),
+          pageSize: readInt(url.searchParams.get("pageSize"), 10, 1, 100),
+        };
 
-      const state = url.searchParams.get("state");
-      const preset = url.searchParams.get("preset");
-      const input: JobsFilterInput = {
-        query: url.searchParams.get("query")?.trim() || undefined,
-        state: state && jobStates.includes(state) ? state as JobsFilterInput["state"] : undefined,
-        preset: preset && jobPresets.includes(preset) ? preset as JobsFilterInput["preset"] : undefined,
-        page: readInt(url.searchParams.get("page"), 1, 1, Number.MAX_SAFE_INTEGER),
-        pageSize: readInt(url.searchParams.get("pageSize"), 10, 1, 100),
-      };
-
-      return json(await getJobHistory(user.hpcUsername, input));
+        return json(await getJobHistory(hpcUsername, input));
+      });
     }
 
     if (url.pathname === "/api/history") {
-      const user = await requireUser(request);
-      if (!user) return json({ error: "Authentication required" }, 401);
-
-      const preset = url.searchParams.get("preset");
-      const safePreset = preset && historyPresets.includes(preset) ? preset as HistoryPreset : "7d";
-      return json(await getHistory(user.hpcUsername, safePreset));
+      return withUser(request, async (hpcUsername) => {
+        const preset = url.searchParams.get("preset");
+        const safePreset = preset && historyPresets.includes(preset) ? preset as HistoryPreset : "7d";
+        return json(await getHistory(hpcUsername, safePreset));
+      });
     }
 
     if (url.pathname.startsWith("/api/")) {
