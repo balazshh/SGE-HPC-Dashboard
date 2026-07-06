@@ -308,14 +308,16 @@ legend {
 
 .status-pill--healthy,
 .status-pill--running,
-.status-pill--finished {
+.status-pill--finished,
+.status-pill--ok {
   color: var(--bosch-green);
 }
 
 .status-pill--degraded,
 .status-pill--queued,
 .status-pill--hold,
-.status-pill--suspended {
+.status-pill--suspended,
+.status-pill--partial {
   color: var(--bosch-blue);
 }
 
@@ -323,6 +325,10 @@ legend {
 .status-pill--error,
 .status-pill--deleted {
   color: var(--bosch-purple);
+}
+
+.status-pill--missing {
+  color: var(--bosch-red);
 }
 
 .two-column {

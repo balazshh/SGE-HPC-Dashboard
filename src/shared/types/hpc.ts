@@ -1,4 +1,5 @@
 export type HealthStatus = "healthy" | "degraded" | "down";
+export type NodeStatus = "ok" | "partial" | "missing";
 export type CanonicalJobState =
   | "queued"
   | "running"
@@ -35,6 +36,22 @@ export interface ClusterSummary {
   healthStatus: HealthStatus;
   offlineNodeCount: number;
   myActiveJobsCount: number;
+}
+
+export interface NodeRecord {
+  hostname: string;
+  arch: string | null;
+  ncpu: number | null;
+  nsoc: number | null;
+  ncor: number | null;
+  nthr: number | null;
+  loadRaw: string | null;
+  memtotRaw: string | null;
+  memuseRaw: string | null;
+  swaptoRaw: string | null;
+  swapusRaw: string | null;
+  status: NodeStatus;
+  lastSeenAt: string;
 }
 
 export interface JobRecord {

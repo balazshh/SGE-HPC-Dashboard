@@ -14,6 +14,7 @@ import { DashboardPage } from "../pages/DashboardPage";
 import { HistoryPage } from "../pages/HistoryPage";
 import { JobsPage } from "../pages/JobsPage";
 import { LoginPage } from "../pages/LoginPage";
+import { NodesPage } from "../pages/NodesPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 
 function AppShell() {
@@ -30,6 +31,9 @@ function AppShell() {
               <nav className="site-nav" aria-label={t("navPrimary")}>
                 <Link to="/" activeProps={{ className: "site-nav__link is-active" }} className="site-nav__link">
                   {t("navDashboard")}
+                </Link>
+                <Link to="/nodes" activeProps={{ className: "site-nav__link is-active" }} className="site-nav__link">
+                  {t("navNodes")}
                 </Link>
                 <Link to="/jobs" activeProps={{ className: "site-nav__link is-active" }} className="site-nav__link">
                   {t("navJobs")}
@@ -65,6 +69,12 @@ const loginRoute = createRoute({
   component: LoginPage,
 });
 
+const nodesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/nodes",
+  component: NodesPage,
+});
+
 const jobsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/jobs",
@@ -80,6 +90,7 @@ const historyRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   dashboardRoute,
   loginRoute,
+  nodesRoute,
   jobsRoute,
   historyRoute,
 ]);

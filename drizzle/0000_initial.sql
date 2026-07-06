@@ -66,6 +66,25 @@ CREATE TABLE cluster_snapshots (
   KEY cluster_snapshots_recorded_at_idx (recorded_at)
 );
 
+CREATE TABLE nodes_current (
+  id serial PRIMARY KEY,
+  hostname varchar(255) NOT NULL,
+  arch varchar(64) NULL,
+  ncpu int NULL,
+  nsoc int NULL,
+  ncor int NULL,
+  nthr int NULL,
+  load_raw varchar(32) NULL,
+  memtot_raw varchar(32) NULL,
+  memuse_raw varchar(32) NULL,
+  swapto_raw varchar(32) NULL,
+  swapus_raw varchar(32) NULL,
+  status enum('ok','partial','missing') NOT NULL,
+  last_seen_at datetime NOT NULL,
+  UNIQUE KEY nodes_current_hostname_unique (hostname),
+  KEY nodes_current_status_idx (status)
+);
+
 CREATE TABLE jobs_current (
   id serial PRIMARY KEY,
   job_id varchar(64) NOT NULL,

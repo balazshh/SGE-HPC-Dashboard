@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm/mysql-core";
 
 const healthStatus = mysqlEnum("health_status", ["healthy", "degraded", "down"]);
+const nodeStatus = mysqlEnum("node_status", ["ok", "partial", "missing"]);
 const jobStateGroup = mysqlEnum("state_group", [
   "queued",
   "running",
@@ -38,6 +39,30 @@ export const clusterSnapshots = mysqlTable(
   },
   (table) => ({
     recordedAtIdx: index("cluster_snapshots_recorded_at_idx").on(table.recordedAt),
+  }),
+);
+
+export const nodesCurrent = mysqlTable(
+  "nodes_current",
+  {
+    id: serial("id").primaryKey(),
+    hostname: varchar("hostname", { length: 255 }).notNull(),
+    arch: varchar("arch", { length: 64 }),
+    ncpu: int("ncpu"),
+    nsoc: int("nsoc"),
+    ncor: int("ncor"),
+    nthr: int("nthr"),
+    loadRaw: varchar("load_raw", { length: 32 }),
+    memtotRaw: varchar("memtot_raw", { length: 32 }),
+    memuseRaw: varchar("memuse_raw", { length: 32 }),
+    swaptoRaw: varchar("swapto_raw", { length: 32 }),
+    swapusRaw: varchar("swapus_raw", { length: 32 }),
+    status: nodeStatus.notNull(),
+    lastSeenAt: datetime("last_seen_at", { mode: "date" }).notNull(),
+  },
+  (table) => ({
+    hostnameUnique: uniqueIndex("nodes_current_hostname_unique").on(table.hostname),
+    statusIdx: index("nodes_current_status_idx").on(table.status),
   }),
 );
 

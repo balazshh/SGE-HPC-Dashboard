@@ -7,6 +7,7 @@ import {
   getDashboardSummary,
   getHistory,
   getJobHistory,
+  getNodes,
 } from "./services/hpc";
 
 const distPath = `${process.cwd()}/dist`;
@@ -67,6 +68,10 @@ Bun.serve({
 
     if (url.pathname === "/api/dashboard/jobs-preview") {
       return withUser(request, async (hpcUsername) => json(await getActiveJobsPreview(hpcUsername)));
+    }
+
+    if (url.pathname === "/api/nodes") {
+      return withUser(request, async () => json(await getNodes()));
     }
 
     if (url.pathname === "/api/jobs/active") {

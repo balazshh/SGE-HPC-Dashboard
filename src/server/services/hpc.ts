@@ -6,6 +6,7 @@ import type {
   HistoryPreset,
   JobRecord,
   JobsFilterInput,
+  NodeRecord,
   PaginatedJobs,
 } from "../../shared/types/hpc";
 import { db } from "../db";
@@ -13,6 +14,7 @@ import {
   clusterSnapshots,
   jobsCurrent,
   jobsHistory,
+  nodesCurrent,
   userJobDaily,
   userJobHourly,
 } from "../db/schema";
@@ -25,6 +27,24 @@ function mapCurrentJob(job: typeof jobsCurrent.$inferSelect): JobRecord {
     state: job.stateGroup,
     submittedAt: job.submittedAt.toISOString(),
     startedAt: job.startedAt?.toISOString(),
+  };
+}
+
+function mapNode(node: typeof nodesCurrent.$inferSelect): NodeRecord {
+  return {
+    hostname: node.hostname,
+    arch: node.arch,
+    ncpu: node.ncpu,
+    nsoc: node.nsoc,
+    ncor: node.ncor,
+    nthr: node.nthr,
+    loadRaw: node.loadRaw,
+    memtotRaw: node.memtotRaw,
+    memuseRaw: node.memuseRaw,
+    swaptoRaw: node.swaptoRaw,
+    swapusRaw: node.swapusRaw,
+    status: node.status,
+    lastSeenAt: node.lastSeenAt.toISOString(),
   };
 }
 
@@ -120,6 +140,15 @@ export async function getDashboardSummary(owner: string): Promise<ClusterSummary
     offlineNodeCount: latest.offlineNodeCount,
     myActiveJobsCount: myJobs.length,
   };
+}
+
+export async function getNodes() {
+  const rows = await db
+    .select()
+    .from(nodesCurrent)
+    .orderBy(nodesCurrent.hostname);
+
+  return rows.map(mapNode);
 }
 
 export async function getActiveJobs(owner: string) {
