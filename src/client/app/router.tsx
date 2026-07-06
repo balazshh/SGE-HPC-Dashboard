@@ -9,6 +9,7 @@ import {
 
 import { BoschLogo } from "../components/BoschLogo";
 import { UserMenu } from "../components/UserMenu";
+import { useUi } from "../lib/ui";
 import { DashboardPage } from "../pages/DashboardPage";
 import { HistoryPage } from "../pages/HistoryPage";
 import { JobsPage } from "../pages/JobsPage";
@@ -16,6 +17,8 @@ import { LoginPage } from "../pages/LoginPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 
 function AppShell() {
+  const { t } = useUi();
+
   return (
     <>
       <header className="site-header">
@@ -24,15 +27,15 @@ function AppShell() {
           <div className="site-header__inner">
             <div className="site-header__left">
               <BoschLogo />
-              <nav className="site-nav" aria-label="Primary">
+              <nav className="site-nav" aria-label={t("navPrimary")}>
                 <Link to="/" activeProps={{ className: "site-nav__link is-active" }} className="site-nav__link">
-                  Dashboard
+                  {t("navDashboard")}
                 </Link>
                 <Link to="/jobs" activeProps={{ className: "site-nav__link is-active" }} className="site-nav__link">
-                  My Jobs
+                  {t("navJobs")}
                 </Link>
                 <Link to="/history" activeProps={{ className: "site-nav__link is-active" }} className="site-nav__link">
-                  My History
+                  {t("navHistory")}
                 </Link>
               </nav>
             </div>

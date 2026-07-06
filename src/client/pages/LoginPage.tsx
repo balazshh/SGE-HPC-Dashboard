@@ -2,10 +2,12 @@ import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { authClient } from "../lib/auth-client";
+import { useUi } from "../lib/ui";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const session = authClient.useSession();
+  const { t } = useUi();
 
   useEffect(() => {
     if (session.data?.user) {
@@ -14,17 +16,15 @@ export function LoginPage() {
   }, [navigate, session.data?.user]);
 
   if (session.isPending) {
-    return <main className="page page--centered"><section className="surface auth-card">Loading sign-in…</section></main>;
+    return <main className="page page--centered"><section className="surface auth-card">{t("loadingSignIn")}</section></main>;
   }
 
   return (
     <main className="page page--centered">
       <section className="surface auth-card">
         <p className="eyebrow">SGE HPC Dashboard</p>
-        <h1>Sign in</h1>
-        <p className="lede">
-          Sign in to access cluster status, your active jobs, and your personal history.
-        </p>
+        <h1>{t("signInTitle")}</h1>
+        <p className="lede">{t("signInDescription")}</p>
 
         <button
           className="btn btn-primary"
@@ -35,7 +35,7 @@ export function LoginPage() {
             });
           }}
         >
-          Sign in with Microsoft Entra ID
+          {t("signInWithEntra")}
         </button>
       </section>
     </main>

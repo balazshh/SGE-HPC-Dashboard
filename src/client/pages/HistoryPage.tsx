@@ -4,6 +4,7 @@ import type { HistoryBucket, HistoryPreset } from "../../shared/types/hpc";
 import { AuthGate } from "../components/AuthGate";
 import { MetricCard } from "../components/MetricCard";
 import { useApi } from "../lib/api";
+import { useUi } from "../lib/ui";
 
 const PRESETS: HistoryPreset[] = ["24h", "7d", "30d", "1y"];
 
@@ -18,13 +19,14 @@ export function HistoryPage() {
 function HistoryPageInner() {
   const [preset, setPreset] = useState<HistoryPreset>("7d");
   const history = useApi<HistoryBucket[]>(`/api/history?preset=${preset}`);
+  const { t } = useUi();
 
   if (history.loading) {
-    return <main className="page"><section className="surface">Loading history…</section></main>;
+    return <main className="page"><section className="surface">{t("loadingHistory")}</section></main>;
   }
 
   if (history.error || !history.data) {
-    return <main className="page"><section className="surface">Failed to load history.</section></main>;
+    return <main className="page"><section className="surface">{t("failedHistory")}</section></main>;
   }
 
   const totals = history.data.reduce(
@@ -43,12 +45,12 @@ function HistoryPageInner() {
     <main className="page">
       <section className="page-header">
         <div>
-          <p className="eyebrow">My History</p>
-          <h1>Personal historical trends</h1>
-          <p className="lede">Short ranges use hourly rollups. Longer ranges switch to daily rollups to keep the page readable.</p>
+          <p className="eyebrow">{t("myHistory")}</p>
+          <h1>{t("personalHistoricalTrends")}</h1>
+          <p className="lede">{t("historyPageLede")}</p>
         </div>
         <fieldset className="preset-group">
-          <legend>Range</legend>
+          <legend>{t("range")}</legend>
           <div>
             {PRESETS.map((option) => (
               <button
@@ -65,33 +67,33 @@ function HistoryPageInner() {
       </section>
 
       <section className="metric-grid">
-        <MetricCard label="Submitted" value={totals.submitted} detail={`Across ${preset}`} />
-        <MetricCard label="Started" value={totals.started} detail="Jobs entering execution" />
-        <MetricCard label="Finished" value={totals.finished} detail="Completed successfully" />
-        <MetricCard label="Failed" value={totals.failed} detail="Explicit failures only" />
+        <MetricCard label={t("submitted")} value={totals.submitted} detail={t("acrossPreset", { preset })} />
+        <MetricCard label={t("started")} value={totals.started} detail={t("jobsEnteringExecution")} />
+        <MetricCard label={t("finished")} value={totals.finished} detail={t("completedSuccessfully")} />
+        <MetricCard label={t("failed")} value={totals.failed} detail={t("explicitFailuresOnly")} />
       </section>
 
       <section className="surface">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">Trend chart</p>
-            <h2>Finished vs failed jobs</h2>
+            <p className="eyebrow">{t("trendChart")}</p>
+            <h2>{t("finishedVsFailedJobs")}</h2>
           </div>
-          <span className="muted">Preset: {preset}</span>
+          <span className="muted">{t("preset")}: {preset}</span>
         </div>
-        <div className="history-chart" role="img" aria-label={`Bar chart of finished and failed jobs for ${preset}`}>
+        <div className="history-chart" role="img" aria-label={t("barChartLabel", { preset })}>
           {history.data.map((bucket) => (
             <div key={bucket.label} className="history-chart__bucket">
               <div className="history-chart__bars">
                 <span
                   className="history-chart__bar history-chart__bar--finished"
                   style={{ height: `${(bucket.finishedCount / maxHeight) * 160}px` }}
-                  title={`Finished: ${bucket.finishedCount}`}
+                  title={`${t("finished")}: ${bucket.finishedCount}`}
                 />
                 <span
                   className="history-chart__bar history-chart__bar--failed"
                   style={{ height: `${(bucket.failedCount / maxHeight) * 160}px` }}
-                  title={`Failed: ${bucket.failedCount}`}
+                  title={`${t("failed")}: ${bucket.failedCount}`}
                 />
               </div>
               <span className="history-chart__label">{bucket.label}</span>

@@ -7,6 +7,7 @@ import { MetricCard } from "../components/MetricCard";
 import { StatusPill } from "../components/StatusPill";
 import { formatBudapestDateTime } from "../lib/format";
 import { useApi } from "../lib/api";
+import { useUi } from "../lib/ui";
 
 export function DashboardPage() {
   return (
@@ -19,13 +20,14 @@ export function DashboardPage() {
 function DashboardPageInner() {
   const summary = useApi<ClusterSummary>("/api/dashboard/summary");
   const myJobs = useApi<JobRecord[]>("/api/dashboard/jobs-preview");
+  const { t } = useUi();
 
   if (summary.loading || myJobs.loading) {
-    return <main className="page"><section className="surface">Loading dashboard…</section></main>;
+    return <main className="page"><section className="surface">{t("loadingDashboard")}</section></main>;
   }
 
   if (summary.error || myJobs.error || !summary.data || !myJobs.data) {
-    return <main className="page"><section className="surface">Failed to load dashboard.</section></main>;
+    return <main className="page"><section className="surface">{t("failedDashboard")}</section></main>;
   }
 
   const utilizationPercent = summary.data.totalSlots > 0
@@ -36,79 +38,79 @@ function DashboardPageInner() {
     <main className="page">
       <section className="page-header">
         <div>
-          <p className="eyebrow">Dashboard</p>
-          <p className="lede">Live status comes from qstat. Timestamps are stored in UTC and shown here in Europe/Budapest.</p>
+          <p className="eyebrow">{t("dashboard")}</p>
+          <p className="lede">{t("dashboardLede")}</p>
         </div>
         <div className="page-header__meta">
-          <span className="muted">Last updated</span>
+          <span className="muted">{t("lastUpdated")}</span>
           <strong>{formatBudapestDateTime(summary.data.updatedAt)}</strong>
         </div>
       </section>
 
       <FreshnessBanner updatedAt={summary.data.updatedAt} />
 
-      <section className="metric-grid" aria-label="Dashboard summary">
-        <MetricCard label="Cluster utilization" value={`${utilizationPercent}%`} detail={`${summary.data.usedSlots} used / ${summary.data.totalSlots} total slots`} />
-        <MetricCard label="Running jobs" value={summary.data.runningJobs} detail="Live scheduler count" />
-        <MetricCard label="Queued jobs" value={summary.data.queuedJobs} detail="Waiting in scheduler queue" />
-        <MetricCard label="Failed jobs" value={summary.data.failedJobs} detail="Explicit scheduler error/failure interpretation" />
-        <MetricCard label="Jobs on hold" value={summary.data.holdJobs} detail="Hold states only" />
-        <MetricCard label="My active jobs" value={summary.data.myActiveJobsCount} detail="Preview from current jobs" />
+      <section className="metric-grid" aria-label={t("dashboard")}>
+        <MetricCard label={t("clusterUtilization")} value={`${utilizationPercent}%`} detail={t("usedOfTotalSlots", { used: summary.data.usedSlots, total: summary.data.totalSlots })} />
+        <MetricCard label={t("runningJobs")} value={summary.data.runningJobs} detail={t("liveSchedulerCount")} />
+        <MetricCard label={t("queuedJobs")} value={summary.data.queuedJobs} detail={t("waitingInSchedulerQueue")} />
+        <MetricCard label={t("failedJobs")} value={summary.data.failedJobs} detail={t("schedulerErrorInterpretation")} />
+        <MetricCard label={t("jobsOnHold")} value={summary.data.holdJobs} detail={t("holdStatesOnly")} />
+        <MetricCard label={t("myActiveJobs")} value={summary.data.myActiveJobsCount} detail={t("previewFromCurrentJobs")} />
       </section>
 
       <section className="two-column">
         <article className="surface">
           <div className="section-title-row">
             <div>
-              <p className="eyebrow">Health</p>
-              <h2>Cluster health summary</h2>
+              <p className="eyebrow">{t("health")}</p>
+              <h2>{t("clusterHealthSummary")}</h2>
             </div>
             <StatusPill value={summary.data.healthStatus} />
           </div>
           <dl className="detail-list">
             <div>
-              <dt>Offline nodes</dt>
+              <dt>{t("offlineNodes")}</dt>
               <dd>{summary.data.offlineNodeCount}</dd>
             </div>
             <div>
-              <dt>Free slots</dt>
+              <dt>{t("freeSlots")}</dt>
               <dd>{summary.data.freeSlots}</dd>
             </div>
             <div>
-              <dt>Health rule</dt>
-              <dd>Healthy: scheduler reachable. Degraded: some nodes offline. Down: scheduler query failed.</dd>
+              <dt>{t("healthRule")}</dt>
+              <dd>{t("healthRuleText")}</dd>
             </div>
           </dl>
         </article>
 
         <article className="surface">
-          <p className="eyebrow">Capacity</p>
-          <h2>Cluster utilization</h2>
+          <p className="eyebrow">{t("capacity")}</p>
+          <h2>{t("clusterUtilization")}</h2>
           <div className="progress" aria-hidden="true">
             <span style={{ width: `${utilizationPercent}%` }} />
           </div>
-          <p className="muted">{utilizationPercent}% of cluster slots are currently in use.</p>
+          <p className="muted">{t("utilizationInUse", { percent: utilizationPercent })}</p>
         </article>
       </section>
 
       <section className="surface">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">My jobs</p>
-            <h2>Active jobs preview</h2>
+            <p className="eyebrow">{t("myJobs")}</p>
+            <h2>{t("activeJobsPreview")}</h2>
           </div>
-          <Link className="btn btn-secondary" to="/jobs">Open My Jobs</Link>
+          <Link className="btn btn-secondary" to="/jobs">{t("openMyJobs")}</Link>
         </div>
         {myJobs.data.length ? (
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Job ID</th>
-                  <th>Name</th>
-                  <th>State</th>
-                  <th>Submitted at</th>
-                  <th>Started at</th>
+                  <th>{t("jobId")}</th>
+                  <th>{t("name")}</th>
+                  <th>{t("state")}</th>
+                  <th>{t("submittedAt")}</th>
+                  <th>{t("startedAt")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -125,7 +127,7 @@ function DashboardPageInner() {
             </table>
           </div>
         ) : (
-          <p className="muted">You have no active jobs right now.</p>
+          <p className="muted">{t("noActiveJobsRightNow")}</p>
         )}
       </section>
     </main>

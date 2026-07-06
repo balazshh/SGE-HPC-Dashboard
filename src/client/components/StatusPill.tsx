@@ -1,7 +1,10 @@
+import { useUi } from "../lib/ui";
+
 interface StatusPillProps {
   value: string;
 }
 
 export function StatusPill({ value }: StatusPillProps) {
-  return <span className={`status-pill status-pill--${value}`}>{value}</span>;
+  const { statusLabel } = useUi();
+  return <span className={`status-pill status-pill--${value}`}>{statusLabel(value)}</span>;
 }

@@ -1,5 +1,6 @@
-import { getFreshnessLabel, getFreshnessLevel } from "../lib/freshness";
+import { getFreshnessLevel } from "../lib/freshness";
 import { formatBudapestDateTime } from "../lib/format";
+import { useUi } from "../lib/ui";
 
 interface FreshnessBannerProps {
   updatedAt: string;
@@ -7,13 +8,12 @@ interface FreshnessBannerProps {
 
 export function FreshnessBanner({ updatedAt }: FreshnessBannerProps) {
   const level = getFreshnessLevel(updatedAt);
+  const { freshnessLabel, t } = useUi();
 
   return (
     <section className={`banner banner--${level}`} aria-live="polite">
-      <div>
-        <strong>{getFreshnessLabel(level)}.</strong> Last collector update {formatBudapestDateTime(updatedAt)}.
-      </div>
-      <span className="banner__pill">5 / 15 / 60 minute thresholds</span>
+      <div>{t("freshnessBanner", { label: freshnessLabel(level), time: formatBudapestDateTime(updatedAt) })}</div>
+      <span className="banner__pill">{t("freshnessThresholds")}</span>
     </section>
   );
 }

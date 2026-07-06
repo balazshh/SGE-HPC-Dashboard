@@ -5,6 +5,7 @@ import { AuthGate } from "../components/AuthGate";
 import { StatusPill } from "../components/StatusPill";
 import { useApi } from "../lib/api";
 import { formatBudapestDateTime } from "../lib/format";
+import { useUi } from "../lib/ui";
 
 const PAGE_SIZE = 5;
 const ALL_STATES = ["all", "queued", "running", "hold", "suspended", "error", "finished", "deleted"] as const;
@@ -23,6 +24,7 @@ function JobsPageInner() {
   const [state, setState] = useState<(typeof ALL_STATES)[number]>("all");
   const [preset, setPreset] = useState<(typeof PRESETS)[number]>("30d");
   const [page, setPage] = useState(1);
+  const { statusLabel, t } = useUi();
 
   const historyPath = useMemo(() => {
     const params = new URLSearchParams({
@@ -41,11 +43,11 @@ function JobsPageInner() {
   const history = useApi<PaginatedJobs>(historyPath);
 
   if (activeJobs.loading || history.loading) {
-    return <main className="page"><section className="surface">Loading jobs…</section></main>;
+    return <main className="page"><section className="surface">{t("loadingJobs")}</section></main>;
   }
 
   if (activeJobs.error || history.error || !activeJobs.data || !history.data) {
-    return <main className="page"><section className="surface">Failed to load jobs.</section></main>;
+    return <main className="page"><section className="surface">{t("failedJobsPage")}</section></main>;
   }
 
   const historyData = history.data;
@@ -54,30 +56,30 @@ function JobsPageInner() {
     <main className="page">
       <section className="page-header">
         <div>
-          <p className="eyebrow">My Jobs</p>
-          <h1>Active jobs and personal history</h1>
-          <p className="lede">Keep live jobs and 1-year finished-job history separate. Filters stay intentionally small: search, state, preset, pagination.</p>
+          <p className="eyebrow">{t("myJobsTitle")}</p>
+          <h1>{t("activeJobsAndHistory")}</h1>
+          <p className="lede">{t("jobsPageLede")}</p>
         </div>
       </section>
 
       <section className="surface">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">Active jobs</p>
-            <h2>Current scheduler view</h2>
+            <p className="eyebrow">{t("activeJobs")}</p>
+            <h2>{t("currentSchedulerView")}</h2>
           </div>
-          <span className="muted">{activeJobs.data.length} active jobs</span>
+          <span className="muted">{t("activeJobsCount", { count: activeJobs.data.length })}</span>
         </div>
         {activeJobs.data.length ? (
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Job ID</th>
-                  <th>Name</th>
-                  <th>State</th>
-                  <th>Submitted at</th>
-                  <th>Started at</th>
+                  <th>{t("jobId")}</th>
+                  <th>{t("name")}</th>
+                  <th>{t("state")}</th>
+                  <th>{t("submittedAt")}</th>
+                  <th>{t("startedAt")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -94,19 +96,19 @@ function JobsPageInner() {
             </table>
           </div>
         ) : (
-          <p className="muted">No active jobs on the cluster.</p>
+          <p className="muted">{t("noActiveJobsOnCluster")}</p>
         )}
       </section>
 
       <section className="surface">
         <div className="section-title-row section-title-row--stack">
           <div>
-            <p className="eyebrow">Past jobs</p>
-            <h2>1-year personal job history</h2>
+            <p className="eyebrow">{t("pastJobs")}</p>
+            <h2>{t("personalJobHistory")}</h2>
           </div>
           <form className="filters" onSubmit={(event) => event.preventDefault()}>
             <label>
-              <span>Search</span>
+              <span>{t("search")}</span>
               <input
                 className="form-input"
                 value={query}
@@ -114,11 +116,11 @@ function JobsPageInner() {
                   setQuery(event.target.value);
                   setPage(1);
                 }}
-                placeholder="Job ID or name"
+                placeholder={t("searchPlaceholder")}
               />
             </label>
             <label>
-              <span>State</span>
+              <span>{t("state")}</span>
               <select
                 className="form-input"
                 value={state}
@@ -128,12 +130,12 @@ function JobsPageInner() {
                 }}
               >
                 {ALL_STATES.map((option) => (
-                  <option key={option} value={option}>{option}</option>
+                  <option key={option} value={option}>{statusLabel(option)}</option>
                 ))}
               </select>
             </label>
             <fieldset className="preset-group">
-              <legend>Date preset</legend>
+              <legend>{t("datePreset")}</legend>
               <div>
                 {PRESETS.map((option) => (
                   <button
@@ -158,12 +160,12 @@ function JobsPageInner() {
             <table>
               <thead>
                 <tr>
-                  <th>Job ID</th>
-                  <th>Name</th>
-                  <th>State</th>
-                  <th>Submitted at</th>
-                  <th>Started at</th>
-                  <th>Finished at</th>
+                  <th>{t("jobId")}</th>
+                  <th>{t("name")}</th>
+                  <th>{t("state")}</th>
+                  <th>{t("submittedAt")}</th>
+                  <th>{t("startedAt")}</th>
+                  <th>{t("finishedAt")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -181,15 +183,15 @@ function JobsPageInner() {
             </table>
           </div>
         ) : (
-          <p className="muted">No jobs matched the selected filters.</p>
+          <p className="muted">{t("noJobsMatched")}</p>
         )}
 
         <div className="pagination-row">
-          <span className="muted">Showing {historyData.items.length} of {historyData.total} jobs</span>
+          <span className="muted">{t("showingJobs", { shown: historyData.items.length, total: historyData.total })}</span>
           <div className="pagination-controls">
-            <button className="btn btn-secondary" disabled={historyData.page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</button>
-            <span>Page {historyData.page} / {historyData.totalPages}</span>
-            <button className="btn btn-secondary" disabled={historyData.page === historyData.totalPages} onClick={() => setPage((value) => Math.min(historyData.totalPages, value + 1))}>Next</button>
+            <button className="btn btn-secondary" disabled={historyData.page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>{t("previous")}</button>
+            <span>{t("page")} {historyData.page} / {historyData.totalPages}</span>
+            <button className="btn btn-secondary" disabled={historyData.page === historyData.totalPages} onClick={() => setPage((value) => Math.min(historyData.totalPages, value + 1))}>{t("next")}</button>
           </div>
         </div>
       </section>

@@ -16,15 +16,3 @@ export function getFreshnessLevel(updatedAt: string, now = new Date()): Freshnes
   return "fresh";
 }
 
-export function getFreshnessLabel(level: FreshnessLevel) {
-  switch (level) {
-    case "warn":
-      return "Update delayed";
-    case "stale":
-      return "Data is stale";
-    case "broken":
-      return "Collector looks broken";
-    default:
-      return "Live feed healthy";
-  }
-}
