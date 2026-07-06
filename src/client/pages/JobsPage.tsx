@@ -1,11 +1,10 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 
-import type { CanonicalJobState } from "../../shared/types/hpc";
+import type { CanonicalJobState, JobRecord, PaginatedJobs } from "../../shared/types/hpc";
 import { AuthGate } from "../components/AuthGate";
 import { StatusPill } from "../components/StatusPill";
+import { useApi } from "../lib/api";
 import { formatBudapestDateTime } from "../lib/format";
-import { useTRPC } from "../lib/trpc";
 
 const PAGE_SIZE = 5;
 const ALL_STATES = ["all", "queued", "running", "hold", "suspended", "error", "finished", "deleted"] as const;
@@ -20,26 +19,36 @@ export function JobsPage() {
 }
 
 function JobsPageInner() {
-  const trpc = useTRPC();
   const [query, setQuery] = useState("");
   const [state, setState] = useState<(typeof ALL_STATES)[number]>("all");
   const [preset, setPreset] = useState<(typeof PRESETS)[number]>("30d");
   const [page, setPage] = useState(1);
 
-  const activeJobs = useQuery(trpc.jobs.getActiveJobs.queryOptions());
-  const history = useQuery(
-    trpc.jobs.getJobHistory.queryOptions({
-      query: query || undefined,
+  const historyPath = useMemo(() => {
+    const params = new URLSearchParams({
       state,
       preset,
-      page,
-      pageSize: PAGE_SIZE,
-    }),
-  );
+      page: String(page),
+      pageSize: String(PAGE_SIZE),
+    });
 
-  if (!activeJobs.data || !history.data) {
+    if (query) params.set("query", query);
+
+    return `/api/jobs/history?${params.toString()}`;
+  }, [page, preset, query, state]);
+
+  const activeJobs = useApi<JobRecord[]>("/api/jobs/active");
+  const history = useApi<PaginatedJobs>(historyPath);
+
+  if (activeJobs.loading || history.loading) {
     return <main className="page"><section className="surface">Loading jobs…</section></main>;
   }
+
+  if (activeJobs.error || history.error || !activeJobs.data || !history.data) {
+    return <main className="page"><section className="surface">Failed to load jobs.</section></main>;
+  }
+
+  const historyData = history.data;
 
   return (
     <main className="page">
@@ -144,7 +153,7 @@ function JobsPageInner() {
           </form>
         </div>
 
-        {history.data.items.length ? (
+        {historyData.items.length ? (
           <div className="table-wrap">
             <table>
               <thead>
@@ -158,7 +167,7 @@ function JobsPageInner() {
                 </tr>
               </thead>
               <tbody>
-                {history.data.items.map((job) => (
+                {historyData.items.map((job) => (
                   <tr key={job.jobId}>
                     <td>{job.jobId}</td>
                     <td>{job.name}</td>
@@ -176,11 +185,11 @@ function JobsPageInner() {
         )}
 
         <div className="pagination-row">
-          <span className="muted">Showing {history.data.items.length} of {history.data.total} jobs</span>
+          <span className="muted">Showing {historyData.items.length} of {historyData.total} jobs</span>
           <div className="pagination-controls">
-            <button className="btn btn-secondary" disabled={history.data.page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</button>
-            <span>Page {history.data.page} / {history.data.totalPages}</span>
-            <button className="btn btn-secondary" disabled={history.data.page === history.data.totalPages} onClick={() => setPage((value) => Math.min(history.data.totalPages, value + 1))}>Next</button>
+            <button className="btn btn-secondary" disabled={historyData.page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</button>
+            <span>Page {historyData.page} / {historyData.totalPages}</span>
+            <button className="btn btn-secondary" disabled={historyData.page === historyData.totalPages} onClick={() => setPage((value) => Math.min(historyData.totalPages, value + 1))}>Next</button>
           </div>
         </div>
       </section>

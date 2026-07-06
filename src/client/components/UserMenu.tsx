@@ -1,14 +1,10 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 
 import { authClient } from "../lib/auth-client";
-import { useTRPC } from "../lib/trpc";
 
 export function UserMenu() {
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const session = useQuery(trpc.auth.getSessionInfo.queryOptions());
+  const session = authClient.useSession();
 
   if (!session.data?.user) {
     return (
@@ -20,7 +16,6 @@ export function UserMenu() {
 
   async function signOut() {
     await authClient.signOut();
-    await queryClient.invalidateQueries();
     navigate({ to: "/login" });
   }
 

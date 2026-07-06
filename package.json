@@ -8,17 +8,12 @@
     "start": "bun src/server/index.ts"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.83.0",
     "@tanstack/react-router": "^1.121.21",
-    "@trpc/client": "^11.13.4",
-    "@trpc/server": "^11.13.4",
-    "@trpc/tanstack-react-query": "^11.13.4",
     "better-auth": "1.5.5",
     "drizzle-orm": "^0.44.2",
     "mysql2": "^3.14.2",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "zod": "^3.24.1"
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@types/react": "^19.1.8",

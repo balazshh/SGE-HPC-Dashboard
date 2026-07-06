@@ -4,7 +4,6 @@ CREATE TABLE user (
   email varchar(255) NOT NULL,
   email_verified boolean NOT NULL DEFAULT false,
   image text NULL,
-  hpc_username varchar(255) NULL,
   created_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   UNIQUE KEY user_email_unique (email)

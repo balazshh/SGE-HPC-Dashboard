@@ -8,7 +8,7 @@ import type {
   JobsFilterInput,
   PaginatedJobs,
 } from "../../shared/types/hpc";
-import { createDb } from "../db";
+import { db } from "../db";
 import {
   clusterSnapshots,
   jobsCurrent,
@@ -80,7 +80,6 @@ function formatDailyLabel(value: Date, preset: HistoryPreset) {
 }
 
 export async function getDashboardSummary(owner: string): Promise<ClusterSummary> {
-  const db = createDb();
   const [latest] = await db
     .select()
     .from(clusterSnapshots)
@@ -124,7 +123,6 @@ export async function getDashboardSummary(owner: string): Promise<ClusterSummary
 }
 
 export async function getActiveJobs(owner: string) {
-  const db = createDb();
   const rows = await db
     .select()
     .from(jobsCurrent)
@@ -146,7 +144,6 @@ export async function getJobHistory(owner: string, input: JobsFilterInput = {}):
   const preset = input.preset ?? "30d";
   const since = new Date(Date.now() - presetDays(preset) * 24 * 60 * 60 * 1000);
 
-  const db = createDb();
   const rows = await db
     .select()
     .from(jobsHistory)
@@ -177,7 +174,6 @@ export async function getJobHistory(owner: string, input: JobsFilterInput = {}):
 }
 
 export async function getHistory(owner: string, preset: HistoryPreset): Promise<HistoryBucket[]> {
-  const db = createDb();
   const since = sinceForPreset(preset);
 
   if (preset === "24h" || preset === "7d") {

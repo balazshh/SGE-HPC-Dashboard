@@ -3,9 +3,9 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { genericOAuth } from "better-auth/plugins";
 
 import type { SessionInfo, SessionUser } from "../../shared/types/hpc";
-import { createDb } from "../db";
-import * as authSchema from "../db/schema/auth";
 import { env } from "../config/env";
+import { db } from "../db";
+import * as authSchema from "../db/schema/auth";
 
 function normalizeHpcUsername(email: string) {
   return email.split("@")[0]?.trim().toLowerCase() ?? "";
@@ -33,7 +33,7 @@ if (missingEntraEnv.length) {
 }
 
 const auth = betterAuth({
-  database: drizzleAdapter(createDb(), {
+  database: drizzleAdapter(db, {
     provider: "mysql",
     schema: authSchema,
   }),
@@ -66,6 +66,6 @@ export async function getSessionInfo(request: Request): Promise<SessionInfo> {
   };
 }
 
-export async function handleAuthRequest(request: Request) {
+export function handleAuthRequest(request: Request) {
   return auth.handler(request);
 }

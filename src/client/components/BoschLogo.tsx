@@ -1,6 +1,6 @@
 export function BoschLogo() {
   return (
-    <a className="header-brand-logo" href="/dashboard" aria-label="Bosch home">
+    <a className="header-brand-logo" href="/" aria-label="Bosch home">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 433 97" aria-hidden="true" focusable="false">
         <g fill="none">
           <g fill="#ed0007" fillRule="evenodd">

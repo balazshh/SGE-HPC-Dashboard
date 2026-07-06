@@ -1,28 +1,20 @@
+import type { ReactNode } from "react";
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 
-import { useTRPC } from "../lib/trpc";
+import { authClient } from "../lib/auth-client";
 
-export function AuthGate({ children }: { children: React.ReactNode }) {
-  const trpc = useTRPC();
+export function AuthGate({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const session = useQuery(trpc.auth.getSessionInfo.queryOptions());
+  const session = authClient.useSession();
 
   useEffect(() => {
-    if (!session.isLoading && !session.data?.user) {
-      navigate({
-        to: "/login",
-        search: {
-          redirect: location.pathname,
-        },
-        replace: true,
-      });
+    if (!session.isPending && !session.data?.user) {
+      navigate({ to: "/login", replace: true });
     }
-  }, [location.pathname, navigate, session.data?.user, session.isLoading]);
+  }, [navigate, session.data?.user, session.isPending]);
 
-  if (session.isLoading || !session.data?.user) {
+  if (session.isPending || !session.data?.user) {
     return <main className="page"><section className="surface">Checking session…</section></main>;
   }
 

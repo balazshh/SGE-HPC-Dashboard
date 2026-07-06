@@ -1,12 +1,12 @@
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
+import type { ClusterSummary, JobRecord } from "../../shared/types/hpc";
 import { AuthGate } from "../components/AuthGate";
 import { FreshnessBanner } from "../components/FreshnessBanner";
 import { MetricCard } from "../components/MetricCard";
 import { StatusPill } from "../components/StatusPill";
 import { formatBudapestDateTime } from "../lib/format";
-import { useTRPC } from "../lib/trpc";
+import { useApi } from "../lib/api";
 
 export function DashboardPage() {
   return (
@@ -17,12 +17,15 @@ export function DashboardPage() {
 }
 
 function DashboardPageInner() {
-  const trpc = useTRPC();
-  const summary = useQuery(trpc.dashboard.getSummary.queryOptions());
-  const myJobs = useQuery(trpc.dashboard.getMyActiveJobsPreview.queryOptions());
+  const summary = useApi<ClusterSummary>("/api/dashboard/summary");
+  const myJobs = useApi<JobRecord[]>("/api/dashboard/jobs-preview");
 
-  if (!summary.data || !myJobs.data) {
+  if (summary.loading || myJobs.loading) {
     return <main className="page"><section className="surface">Loading dashboard…</section></main>;
+  }
+
+  if (summary.error || myJobs.error || !summary.data || !myJobs.data) {
+    return <main className="page"><section className="surface">Failed to load dashboard.</section></main>;
   }
 
   const utilizationPercent = summary.data.totalSlots > 0
@@ -34,7 +37,6 @@ function DashboardPageInner() {
       <section className="page-header">
         <div>
           <p className="eyebrow">Dashboard</p>
-          <h1>Cluster status at a glance</h1>
           <p className="lede">Live status comes from qstat. Timestamps are stored in UTC and shown here in Europe/Budapest.</p>
         </div>
         <div className="page-header__meta">
@@ -45,7 +47,7 @@ function DashboardPageInner() {
 
       <FreshnessBanner updatedAt={summary.data.updatedAt} />
 
-      <section className="metric-grid" aria-label="Cluster summary">
+      <section className="metric-grid" aria-label="Dashboard summary">
         <MetricCard label="Cluster utilization" value={`${utilizationPercent}%`} detail={`${summary.data.usedSlots} used / ${summary.data.totalSlots} total slots`} />
         <MetricCard label="Running jobs" value={summary.data.runningJobs} detail="Live scheduler count" />
         <MetricCard label="Queued jobs" value={summary.data.queuedJobs} detail="Waiting in scheduler queue" />

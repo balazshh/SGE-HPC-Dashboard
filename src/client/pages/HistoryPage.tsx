@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 
-import type { HistoryPreset } from "../../shared/types/hpc";
+import type { HistoryBucket, HistoryPreset } from "../../shared/types/hpc";
 import { AuthGate } from "../components/AuthGate";
 import { MetricCard } from "../components/MetricCard";
-import { useTRPC } from "../lib/trpc";
+import { useApi } from "../lib/api";
 
 const PRESETS: HistoryPreset[] = ["24h", "7d", "30d", "1y"];
 
@@ -17,12 +16,15 @@ export function HistoryPage() {
 }
 
 function HistoryPageInner() {
-  const trpc = useTRPC();
   const [preset, setPreset] = useState<HistoryPreset>("7d");
-  const history = useQuery(trpc.history.getMyHistory.queryOptions({ preset }));
+  const history = useApi<HistoryBucket[]>(`/api/history?preset=${preset}`);
 
-  if (!history.data) {
+  if (history.loading) {
     return <main className="page"><section className="surface">Loading history…</section></main>;
+  }
+
+  if (history.error || !history.data) {
+    return <main className="page"><section className="surface">Failed to load history.</section></main>;
   }
 
   const totals = history.data.reduce(

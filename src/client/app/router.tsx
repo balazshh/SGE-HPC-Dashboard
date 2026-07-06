@@ -5,6 +5,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  redirect,
 } from "@tanstack/react-router";
 
 import { BoschLogo } from "../components/BoschLogo";
@@ -25,7 +26,7 @@ function AppShell() {
             <div className="site-header__left">
               <BoschLogo />
               <nav className="site-nav" aria-label="Primary">
-                <Link to="/dashboard" activeProps={{ className: "site-nav__link is-active" }} className="site-nav__link">
+                <Link to="/" activeProps={{ className: "site-nav__link is-active" }} className="site-nav__link">
                   Dashboard
                 </Link>
                 <Link to="/jobs" activeProps={{ className: "site-nav__link is-active" }} className="site-nav__link">
@@ -50,7 +51,7 @@ const rootRoute = createRootRoute({
   notFoundComponent: NotFoundPage,
 });
 
-const indexRoute = createRoute({
+const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: DashboardPage,
@@ -62,10 +63,12 @@ const loginRoute = createRoute({
   component: LoginPage,
 });
 
-const dashboardRoute = createRoute({
+const legacyDashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/dashboard",
-  component: DashboardPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/" });
+  },
 });
 
 const jobsRoute = createRoute({
@@ -81,9 +84,9 @@ const historyRoute = createRoute({
 });
 
 const routeTree = rootRoute.addChildren([
-  indexRoute,
-  loginRoute,
   dashboardRoute,
+  loginRoute,
+  legacyDashboardRoute,
   jobsRoute,
   historyRoute,
 ]);

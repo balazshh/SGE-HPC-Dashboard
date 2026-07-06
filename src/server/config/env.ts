@@ -19,7 +19,6 @@ function readOptionalInt(name: string, fallback: number) {
 }
 
 export const env = {
-  nodeEnv: process.env.NODE_ENV ?? "development",
   port: readOptionalInt("PORT", 3001),
   appBaseUrl: process.env.APP_BASE_URL ?? "http://localhost:5173",
   betterAuthSecret: process.env.BETTER_AUTH_SECRET ?? "",
@@ -31,5 +30,4 @@ export const env = {
   entraClientId: process.env.ENTRA_CLIENT_ID ?? "",
   entraTenantId: process.env.ENTRA_TENANT_ID ?? "",
   entraClientSecret: process.env.ENTRA_CLIENT_SECRET ?? "",
-  timezone: "Europe/Budapest",
 } as const;

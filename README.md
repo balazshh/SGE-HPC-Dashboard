@@ -1,4 +1,4 @@
-# HPC Dashboard v2
+# SGE HPC Dashboard
 
 Production-only HPC dashboard.
 
@@ -51,7 +51,6 @@ APP_BASE_URL=https://bp-hpc-dashboard-test.emea.bosch.com
 PORT=3001
 
 BETTER_AUTH_SECRET=
-DB_WRITE=0
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_NAME=hpc_dashboard
@@ -70,7 +69,7 @@ Notes:
 
 ### 3. One-time database reset and schema load
 
-If this environment ever ran an older version of the app, reset the test database once before the first login. This avoids schema drift such as a missing `user.hpc_username` column.
+If this environment ever ran an older version of the app, reset the test database once before the first login. This avoids schema drift from older test deployments.
 
 ```bash
 mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p <<SQL
