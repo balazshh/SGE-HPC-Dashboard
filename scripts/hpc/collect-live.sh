@@ -21,7 +21,17 @@ run_command_or_cat "$QSTAT_CLUSTER_COMMAND" "${QSTAT_CLUSTER_FILE:-}" > "$cluste
 run_command_or_cat "$QSTAT_JOBS_COMMAND" "${QSTAT_JOBS_FILE:-}" > "$jobs_txt"
 
 read -r total_slots used_slots free_slots offline_node_count < <(
-  awk 'NF && $1 != "CLUSTER" && $1 !~ /^-+$/ { print $6, $3, $5, $7; exit }' "$cluster_txt"
+  awk '
+  NF && $1 != "CLUSTER" && $1 !~ /^-+$/ {
+    total += $6 + 0;
+    used += $3 + 0;
+    free += $5 + 0;
+  }
+  END {
+    # ponytail: qstat -g c gives slot totals, not offline-node counts; keep 0 until we parse qhost/qstat -f for node health.
+    print total + 0, used + 0, free + 0, 0;
+  }
+  ' "$cluster_txt"
 )
 
 awk -v recorded_at="$recorded_at" -v summary_env="$summary_env" '
