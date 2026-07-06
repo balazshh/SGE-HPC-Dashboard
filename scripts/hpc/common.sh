@@ -51,7 +51,6 @@ collector_init() {
 
 mysql_exec() {
   MYSQL_PWD="$DB_PASSWORD" mysql \
-    --local-infile=1 \
     --default-character-set=utf8mb4 \
     -h "$DB_HOST" \
     -P "$DB_PORT" \
@@ -61,7 +60,6 @@ mysql_exec() {
 
 mysql_file() {
   MYSQL_PWD="$DB_PASSWORD" mysql \
-    --local-infile=1 \
     --default-character-set=utf8mb4 \
     -h "$DB_HOST" \
     -P "$DB_PORT" \

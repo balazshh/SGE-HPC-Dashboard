@@ -69,15 +69,40 @@ END {
 }
 ' OFS='\t' "$qacct_txt" > "$history_tsv"
 
-cat > "$sql_file" <<SQL
-LOAD DATA LOCAL INFILE '${history_tsv}'
-IGNORE
-INTO TABLE jobs_history
-FIELDS TERMINATED BY '\t'
-LINES TERMINATED BY '\n'
-(job_id, owner, name, state_final, submitted_at, @started_at, finished_at, slots, @queue)
-SET started_at = NULLIF(@started_at, ''), queue = NULLIF(@queue, '');
-SQL
+awk -F '\t' '
+function esc(value) {
+  gsub(/\\/, "\\\\", value);
+  gsub(/\047/, "\047\047", value);
+  return value;
+}
+function quote(value) {
+  return sq esc(value) sq;
+}
+BEGIN {
+  sq = sprintf("%c", 39);
+  prefix = "INSERT IGNORE INTO jobs_history (job_id, owner, name, state_final, submitted_at, started_at, finished_at, slots, queue) VALUES\n";
+  batch_size = 500;
+  count = 0;
+}
+NF {
+  started_at = $6 == "" ? "NULL" : quote($6);
+  queue = $9 == "" ? "NULL" : quote($9);
+  row = "  (" quote($1) ", " quote($2) ", " quote($3) ", " quote($4) ", " quote($5) ", " started_at ", " quote($7) ", " ($8 + 0) ", " queue ")";
+  if (count == 0) {
+    printf "%s%s", prefix, row;
+  } else {
+    printf ",\n%s", row;
+  }
+  count++;
+  if (count >= batch_size) {
+    printf ";\n";
+    count = 0;
+  }
+}
+END {
+  if (count > 0) printf ";\n";
+}
+' "$history_tsv" > "$sql_file"
 
 mysql_file "$sql_file"
 echo "history loaded"

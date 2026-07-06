@@ -202,9 +202,9 @@ DB_NAME=hpc_dashboard
 DB_USER=hpc_dashboard
 DB_PASSWORD=change-me
 
-QSTAT_CLUSTER_COMMAND=qstat -g c
-QSTAT_JOBS_COMMAND=qstat -u '*'
-QACCT_COMMAND=qacct
+QSTAT_CLUSTER_COMMAND='qstat -g c'
+QSTAT_JOBS_COMMAND="qstat -u '*'"
+QACCT_COMMAND='qacct'
 ```
 
 ### 2. Run collectors

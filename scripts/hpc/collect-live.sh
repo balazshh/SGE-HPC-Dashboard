@@ -79,12 +79,43 @@ INSERT INTO cluster_snapshots
 VALUES
   ('${recorded_at}', ${total_slots}, ${used_slots}, ${free_slots}, ${running_jobs}, ${queued_jobs}, ${failed_jobs}, ${hold_jobs}, '${health_status}', ${offline_node_count});
 DELETE FROM jobs_current;
-LOAD DATA LOCAL INFILE '${jobs_tsv}'
-INTO TABLE jobs_current
-FIELDS TERMINATED BY '\t'
-LINES TERMINATED BY '\n'
-(job_id, owner, name, state_raw, state_group, submitted_at, @started_at, slots, last_seen_at)
-SET started_at = NULLIF(@started_at, '');
+SQL
+
+awk -F '\t' '
+function esc(value) {
+  gsub(/\\/, "\\\\", value);
+  gsub(/\047/, "\047\047", value);
+  return value;
+}
+function quote(value) {
+  return sq esc(value) sq;
+}
+BEGIN {
+  sq = sprintf("%c", 39);
+  prefix = "INSERT INTO jobs_current (job_id, owner, name, state_raw, state_group, submitted_at, started_at, slots, last_seen_at) VALUES\n";
+  batch_size = 500;
+  count = 0;
+}
+NF {
+  started_at = $7 == "" ? "NULL" : quote($7);
+  row = "  (" quote($1) ", " quote($2) ", " quote($3) ", " quote($4) ", " quote($5) ", " quote($6) ", " started_at ", " ($8 + 0) ", " quote($9) ")";
+  if (count == 0) {
+    printf "%s%s", prefix, row;
+  } else {
+    printf ",\n%s", row;
+  }
+  count++;
+  if (count >= batch_size) {
+    printf ";\n";
+    count = 0;
+  }
+}
+END {
+  if (count > 0) printf ";\n";
+}
+' "$jobs_tsv" >> "$sql_file"
+
+cat >> "$sql_file" <<'SQL'
 COMMIT;
 SQL
 
