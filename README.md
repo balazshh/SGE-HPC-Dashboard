@@ -1,6 +1,6 @@
 # SGE HPC Dashboard
 
-This app shows SGE cluster status, your jobs, and your job history.
+This app shows SGE cluster status, nodes, your jobs, and your job history.
 
 It has 2 parts:
 
@@ -28,6 +28,7 @@ If the collectors do not run, the dashboard will be empty.
 
 - `qstat -g c`
 - `qstat -u '*'`
+- `qhost`
 - `qacct`
 - cron
 - network access to the same MySQL database
@@ -192,6 +193,7 @@ DB_PASSWORD=change-me
 HPC_TZ=Europe/Budapest
 QSTAT_CLUSTER_COMMAND='qstat -g c'
 QSTAT_JOBS_COMMAND="qstat -u '*'"
+QHOST_COMMAND='qhost'
 QACCT_COMMAND='qacct'
 ```
 
@@ -227,7 +229,7 @@ https://your-dashboard.example.com
 
 Sign in with Entra ID.
 
-If login works and collectors are writing data, the dashboard is ready.
+If login works and collectors are writing data, the dashboard, nodes page, jobs page, and history page are ready.
 
 ---
 
