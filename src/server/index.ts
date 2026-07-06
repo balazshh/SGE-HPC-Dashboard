@@ -71,7 +71,8 @@ Bun.serve({
     }
 
     if (url.pathname === "/api/nodes") {
-      return withUser(request, async () => json(await getNodes()));
+      const user = (await getSessionInfo(request)).user;
+      return user ? json(await getNodes()) : json({ error: "Authentication required" }, 401);
     }
 
     if (url.pathname === "/api/jobs/active") {

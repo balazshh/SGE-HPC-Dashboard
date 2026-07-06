@@ -60,18 +60,15 @@ function mapHistoryJob(job: typeof jobsHistory.$inferSelect): JobRecord {
   };
 }
 
-function presetDays(preset: Exclude<HistoryPreset, "24h">) {
-  if (preset === "7d") return 7;
-  if (preset === "30d") return 30;
-  return 365;
-}
+const presetDays = {
+  "24h": 1,
+  "7d": 7,
+  "30d": 30,
+  "1y": 365,
+} as const;
 
 function sinceForPreset(preset: HistoryPreset) {
-  const now = Date.now();
-  if (preset === "24h") return new Date(now - 24 * 60 * 60 * 1000);
-  if (preset === "7d") return new Date(now - 7 * 24 * 60 * 60 * 1000);
-  if (preset === "30d") return new Date(now - 30 * 24 * 60 * 60 * 1000);
-  return new Date(now - 365 * 24 * 60 * 60 * 1000);
+  return new Date(Date.now() - presetDays[preset] * 24 * 60 * 60 * 1000);
 }
 
 function matchesQuery(job: JobRecord, query?: string) {
@@ -93,7 +90,7 @@ function formatHourlyLabel(value: Date, preset: HistoryPreset) {
 
 function formatDailyLabel(value: Date, preset: HistoryPreset) {
   return new Intl.DateTimeFormat("en-GB", {
-    month: preset === "1y" ? "short" : "short",
+    month: "short",
     day: preset === "1y" ? undefined : "2-digit",
     timeZone: "Europe/Budapest",
   }).format(value);
@@ -171,7 +168,7 @@ export async function getJobHistory(owner: string, input: JobsFilterInput = {}):
   const pageSize = Math.max(1, Math.min(100, input.pageSize ?? 10));
   const state = input.state ?? "all";
   const preset = input.preset ?? "30d";
-  const since = new Date(Date.now() - presetDays(preset) * 24 * 60 * 60 * 1000);
+  const since = sinceForPreset(preset);
 
   const rows = await db
     .select()

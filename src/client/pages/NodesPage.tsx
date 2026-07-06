@@ -11,10 +11,6 @@ function readNumber(value?: string | null) {
   return Number.isFinite(number) ? number : null;
 }
 
-function show(value?: string | number | null) {
-  return value ?? "—";
-}
-
 export function NodesPage() {
   return (
     <AuthGate>
@@ -37,11 +33,15 @@ function NodesPageInner() {
 
   const items = nodes.data;
   const updatedAt = items[0]?.lastSeenAt;
-  const okCount = items.filter((node) => node.status === "ok").length;
-  const partialCount = items.filter((node) => node.status === "partial").length;
-  const missingCount = items.filter((node) => node.status === "missing").length;
-  const idleCount = items.filter((node) => node.status === "ok" && readNumber(node.loadRaw) === 0).length;
-  const busyCount = items.filter((node) => node.status === "ok" && (readNumber(node.loadRaw) ?? 0) > 0).length;
+  const counts = items.reduce((summary, node) => {
+    summary[node.status] += 1;
+    if (node.status === "ok") {
+      const load = readNumber(node.loadRaw) ?? 0;
+      if (load === 0) summary.idle += 1;
+      else summary.busy += 1;
+    }
+    return summary;
+  }, { ok: 0, partial: 0, missing: 0, idle: 0, busy: 0 });
 
   return (
     <main className="page">
@@ -61,11 +61,11 @@ function NodesPageInner() {
 
       <section className="metric-grid" aria-label={t("nodes")}>
         <MetricCard label={t("totalNodes")} value={items.length} detail={t("nodesFromQhost")} />
-        <MetricCard label={t("okNodes")} value={okCount} detail={t("completeQhostRows")} />
-        <MetricCard label={t("partialNodes")} value={partialCount} detail={t("partialQhostRows")} />
-        <MetricCard label={t("missingNodes")} value={missingCount} detail={t("missingQhostRows")} />
-        <MetricCard label={t("idleNodes")} value={idleCount} detail={t("idleNodesDetail")} />
-        <MetricCard label={t("busyNodes")} value={busyCount} detail={t("busyNodesDetail")} />
+        <MetricCard label={t("okNodes")} value={counts.ok} detail={t("completeQhostRows")} />
+        <MetricCard label={t("partialNodes")} value={counts.partial} detail={t("partialQhostRows")} />
+        <MetricCard label={t("missingNodes")} value={counts.missing} detail={t("missingQhostRows")} />
+        <MetricCard label={t("idleNodes")} value={counts.idle} detail={t("idleNodesDetail")} />
+        <MetricCard label={t("busyNodes")} value={counts.busy} detail={t("busyNodesDetail")} />
       </section>
 
       <section className="surface">
@@ -104,17 +104,17 @@ function NodesPageInner() {
                     <tr key={node.hostname}>
                       <td>{node.hostname}</td>
                       <td><StatusPill value={node.status} /></td>
-                      <td>{show(node.arch)}</td>
-                      <td>{show(node.ncpu)}</td>
-                      <td>{show(node.nsoc)}</td>
-                      <td>{show(node.ncor)}</td>
-                      <td>{show(node.nthr)}</td>
-                      <td>{show(node.loadRaw)}</td>
-                      <td>{show(loadPerCpu)}</td>
-                      <td>{show(node.memtotRaw)}</td>
-                      <td>{show(node.memuseRaw)}</td>
-                      <td>{show(node.swaptoRaw)}</td>
-                      <td>{show(node.swapusRaw)}</td>
+                      <td>{node.arch ?? "—"}</td>
+                      <td>{node.ncpu ?? "—"}</td>
+                      <td>{node.nsoc ?? "—"}</td>
+                      <td>{node.ncor ?? "—"}</td>
+                      <td>{node.nthr ?? "—"}</td>
+                      <td>{node.loadRaw ?? "—"}</td>
+                      <td>{loadPerCpu ?? "—"}</td>
+                      <td>{node.memtotRaw ?? "—"}</td>
+                      <td>{node.memuseRaw ?? "—"}</td>
+                      <td>{node.swaptoRaw ?? "—"}</td>
+                      <td>{node.swapusRaw ?? "—"}</td>
                     </tr>
                   );
                 })}
