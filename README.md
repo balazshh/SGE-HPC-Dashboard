@@ -56,8 +56,8 @@ PORT=3001
 BETTER_AUTH_SECRET=put-a-long-random-secret-here
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_NAME=hpc_dashboard
-DB_USER=hpc_dashboard
+DB_NAME=hpc_dashboard_test_db
+DB_USER=hpc_dashboard_test_db_user
 DB_PASSWORD=change-me
 ENTRA_CLIENT_ID=your-client-id
 ENTRA_TENANT_ID=your-tenant-id
@@ -74,16 +74,16 @@ Rules:
 
 ## 3. Create the database
 
-Do this once on the web VM.
+Do this once on the web VM. Assume you are already inside MySQL.
 
-```bash
-cd /d/hpc-dashboard-test
-mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p <<SQL
-DROP DATABASE IF EXISTS \`$DB_NAME\`;
-CREATE DATABASE \`$DB_NAME\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-SQL
-
-mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p "$DB_NAME" < drizzle/0000_initial.sql
+```sql
+DROP DATABASE IF EXISTS `hpc_dashboard_test_db`;
+CREATE DATABASE `hpc_dashboard_test_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'hpc_dashboard_test_db_user'@'%' IDENTIFIED BY 'change-me';
+GRANT ALL PRIVILEGES ON `hpc_dashboard_test_db`.* TO 'hpc_dashboard_test_db_user'@'%';
+FLUSH PRIVILEGES;
+USE `hpc_dashboard_test_db`;
+SOURCE drizzle/0000_initial.sql;
 ```
 
 This is the easiest safe path for a fresh test deploy.
@@ -187,8 +187,8 @@ cp scripts/hpc/collector.env.example scripts/hpc/collector.env
 ```env
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_NAME=hpc_dashboard
-DB_USER=hpc_dashboard
+DB_NAME=hpc_dashboard_test_db
+DB_USER=hpc_dashboard_test_db_user
 DB_PASSWORD=change-me
 HPC_TZ=Europe/Budapest
 QSTAT_CLUSTER_COMMAND='qstat -g c'
@@ -257,7 +257,12 @@ docker build --network=host \
 docker rm -f hpc-dashboard-test 2>/dev/null || true && docker run -d --name hpc-dashboard-test --env-file /d/.env -p 127.0.0.1:3001:3001 --restart unless-stopped hpc-dashboard-test
 ```
 
-If the app schema changes in the future, load the matching SQL before starting the new container.
+If the app schema changes in the future, assume you are already inside MySQL and run:
+
+```sql
+USE `hpc_dashboard_test_db`;
+SOURCE drizzle/<new-schema-file>.sql;
+```
 
 ---
 
