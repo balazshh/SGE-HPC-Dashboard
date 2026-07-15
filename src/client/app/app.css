@@ -73,6 +73,7 @@ select {
 .site-header__bar {
   min-height: 54px;
   background: var(--color-background);
+  overflow-x: auto;
 }
 
 .site-header__inner,
@@ -86,9 +87,12 @@ select {
 .site-header__inner {
   min-height: 72px;
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
-  gap: calc(var(--space-unit) * 4);
+  gap: calc(var(--space-unit) * 2);
+  padding-top: calc(var(--space-unit) * 2);
+  padding-bottom: calc(var(--space-unit) * 2);
 }
 
 .site-header__inner > *,
@@ -101,15 +105,21 @@ select {
 .site-header__left {
   display: flex;
   align-items: center;
-  gap: calc(var(--space-unit) * 4);
-  flex-wrap: wrap;
+  gap: calc(var(--space-unit) * 3);
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .user-menu {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
-  gap: calc(var(--space-unit) * 2);
+  gap: calc(var(--space-unit) * 1.5);
+  margin-left: auto;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .user-menu__controls {
@@ -122,6 +132,17 @@ select {
 .user-menu__identity {
   display: grid;
   justify-items: end;
+  min-width: 0;
+  max-width: 240px;
+}
+
+.user-menu__identity strong,
+.user-menu__identity .muted {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .user-menu__identity .muted {
@@ -154,14 +175,23 @@ label {
 .site-nav {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: calc(var(--space-unit) * 2);
+  flex-wrap: nowrap;
+  gap: var(--space-unit);
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.site-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .site-nav__link {
-  padding: calc(var(--space-unit) * 1.5) calc(var(--space-unit) * 2);
+  padding: calc(var(--space-unit) * 1.25) calc(var(--space-unit) * 1.5);
   text-decoration: none;
   border: 1px solid transparent;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .site-nav__link:hover,
@@ -189,6 +219,7 @@ label {
 .page-header,
 .section-title-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: calc(var(--space-unit) * 4);
@@ -547,24 +578,9 @@ th {
   .page-header,
   .section-title-row,
   .pagination-row,
-  .pagination-controls,
-  .site-header__inner,
-  .site-header__left {
+  .pagination-controls {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .user-menu {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .user-menu__identity {
-    justify-items: start;
-  }
-
-  .user-menu__controls {
-    order: -1;
   }
 }
 
