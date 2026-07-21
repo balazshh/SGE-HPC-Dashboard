@@ -36,17 +36,6 @@ function DashboardPageInner() {
 
   return (
     <main className="page">
-      <section className="page-header">
-        <div>
-          <p className="eyebrow">{t("dashboard")}</p>
-          <p className="lede">{t("dashboardLede")}</p>
-        </div>
-        <div className="page-header__meta">
-          <span className="muted">{t("lastUpdated")}</span>
-          <strong>{formatBudapestDateTime(summary.data.updatedAt)}</strong>
-        </div>
-      </section>
-
       <FreshnessBanner updatedAt={summary.data.updatedAt} />
 
       <section className="metric-grid" aria-label={t("dashboard")}>
