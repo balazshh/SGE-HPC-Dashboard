@@ -1,23 +1,37 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { genericOAuth } from "better-auth/plugins";
+import { desc, eq } from "drizzle-orm";
 
 import type { SessionInfo, SessionUser } from "../../shared/types/hpc";
 import { env } from "../config/env";
 import { db } from "../db";
 import * as authSchema from "../db/schema/auth";
 
-function normalizeHpcUsername(email: string) {
-  return email.split("@")[0]?.trim().toLowerCase() ?? "";
+function normalizeHpcUsername(value: string) {
+  return value.split("@")[0]?.trim().toLowerCase() ?? "";
 }
 
-function mapAuthUser(user: { name?: string | null; email?: string | null }) {
+function readPreferredUsernameClaim(idToken?: string | null) {
+  const payload = idToken?.split(".")[1];
+  if (!payload) return "";
+
+  try {
+    const json = Buffer.from(payload, "base64url").toString("utf8");
+    const claims = JSON.parse(json) as { preferred_username?: string };
+    return claims.preferred_username ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function mapAuthUser(user: { name?: string | null; email?: string | null }, hpcLogin?: string) {
   if (!user.email) return null;
 
   return {
     name: user.name || user.email,
     email: user.email,
-    hpcUsername: normalizeHpcUsername(user.email),
+    hpcUsername: normalizeHpcUsername(hpcLogin || user.email),
   } satisfies SessionUser;
 }
 
@@ -60,8 +74,21 @@ const auth = betterAuth({
 
 export async function getSessionInfo(request: Request): Promise<SessionInfo> {
   const session = await auth.api.getSession({ headers: request.headers });
+  if (!session?.user) {
+    return { user: null, authMode: "entra" };
+  }
+
+  const [account] = session.user.id
+    ? await db
+      .select({ idToken: authSchema.account.idToken })
+      .from(authSchema.account)
+      .where(eq(authSchema.account.userId, session.user.id))
+      .orderBy(desc(authSchema.account.updatedAt))
+      .limit(1)
+    : [];
+
   return {
-    user: session?.user ? mapAuthUser(session.user) : null,
+    user: mapAuthUser(session.user, readPreferredUsernameClaim(account?.idToken)),
     authMode: "entra",
   };
 }

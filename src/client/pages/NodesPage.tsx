@@ -3,7 +3,6 @@ import { AuthGate } from "../components/AuthGate";
 import { MetricCard } from "../components/MetricCard";
 import { StatusPill } from "../components/StatusPill";
 import { useApi } from "../lib/api";
-import { formatBudapestDateTime } from "../lib/format";
 import { useUi } from "../lib/ui";
 
 function readNumber(value?: string | null) {
@@ -32,7 +31,6 @@ function NodesPageInner() {
   }
 
   const items = nodes.data;
-  const updatedAt = items[0]?.lastSeenAt;
   const counts = items.reduce((summary, node) => {
     summary[node.status] += 1;
     if (node.status === "ok") {
@@ -45,20 +43,6 @@ function NodesPageInner() {
 
   return (
     <main className="page">
-      <section className="page-header">
-        <div>
-          <p className="eyebrow">{t("nodes")}</p>
-          <h1>{t("liveNodeInventory")}</h1>
-          <p className="lede">{t("nodesPageLede")}</p>
-        </div>
-        {updatedAt ? (
-          <div className="page-header__meta">
-            <span className="muted">{t("lastUpdated")}</span>
-            <strong>{formatBudapestDateTime(updatedAt)}</strong>
-          </div>
-        ) : null}
-      </section>
-
       <section className="metric-grid" aria-label={t("nodes")}>
         <MetricCard label={t("totalNodes")} value={items.length} detail={t("nodesFromQhost")} />
         <MetricCard label={t("okNodes")} value={counts.ok} detail={t("completeQhostRows")} />
