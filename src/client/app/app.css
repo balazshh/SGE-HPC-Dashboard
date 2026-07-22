@@ -130,13 +130,6 @@ select {
   white-space: nowrap;
 }
 
-.user-menu__timestamp {
-  display: grid;
-  gap: var(--space-unit);
-  justify-items: end;
-  white-space: nowrap;
-}
-
 .user-menu__identity {
   display: grid;
   justify-items: end;
@@ -153,7 +146,6 @@ select {
   white-space: nowrap;
 }
 
-.user-menu__timestamp .muted,
 .user-menu__identity .muted {
   font-size: 0.875rem;
 }

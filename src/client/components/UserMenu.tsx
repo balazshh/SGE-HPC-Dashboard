@@ -1,15 +1,11 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 
-import type { ClusterSummary } from "../../shared/types/hpc";
 import { authClient } from "../lib/auth-client";
-import { useApi } from "../lib/api";
-import { formatBudapestDateTime } from "../lib/format";
 import { languageOptions, useUi } from "../lib/ui";
 
 export function UserMenu() {
   const navigate = useNavigate();
   const session = authClient.useSession();
-  const summary = useApi<ClusterSummary>(session.data?.user ? "/api/dashboard/summary" : null);
   const { language, setLanguage, theme, toggleTheme, t } = useUi();
 
   if (!session.data?.user) {
@@ -48,12 +44,6 @@ export function UserMenu() {
 
   return (
     <div className="user-menu">
-      {summary.data?.updatedAt ? (
-        <div className="user-menu__timestamp">
-          <span className="muted">{t("lastUpdated")}</span>
-          <strong>{formatBudapestDateTime(summary.data.updatedAt)}</strong>
-        </div>
-      ) : null}
       <select
         className="control-select"
         aria-label={t("language")}

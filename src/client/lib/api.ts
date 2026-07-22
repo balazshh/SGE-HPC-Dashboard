@@ -1,18 +1,11 @@
 import { useEffect, useState } from "react";
 
-export function useApi<T>(path: string | null) {
+export function useApi<T>(path: string) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(Boolean(path));
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!path) {
-      setData(null);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
     const controller = new AbortController();
 
     setData(null);
