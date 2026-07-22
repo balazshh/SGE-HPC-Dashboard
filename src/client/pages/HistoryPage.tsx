@@ -49,8 +49,7 @@ function HistoryPageInner() {
           <h1>{t("personalHistoricalTrends")}</h1>
           <p className="lede">{t("historyPageLede")}</p>
         </div>
-        <fieldset className="preset-group">
-          <legend>{t("range")}</legend>
+        <div className="preset-group" role="group" aria-label={t("range")}>
           <div>
             {PRESETS.map((option) => (
               <button
@@ -63,7 +62,7 @@ function HistoryPageInner() {
               </button>
             ))}
           </div>
-        </fieldset>
+        </div>
       </section>
 
       <section className="metric-grid">

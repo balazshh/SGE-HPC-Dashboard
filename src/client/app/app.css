@@ -134,7 +134,7 @@ select {
   display: grid;
   justify-items: end;
   min-width: 0;
-  max-width: 240px;
+  max-width: 420px;
 }
 
 .user-menu__identity strong,
