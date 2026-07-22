@@ -3,6 +3,7 @@ import { AuthGate } from "../components/AuthGate";
 import { MetricCard } from "../components/MetricCard";
 import { StatusPill } from "../components/StatusPill";
 import { useApi } from "../lib/api";
+import { formatMemoryGigabytes } from "../lib/format";
 import { useUi } from "../lib/ui";
 
 function readNumber(value?: string | null) {
@@ -75,8 +76,6 @@ function NodesPageInner() {
                   <th>{t("loadPerCpu")}</th>
                   <th>{t("memoryTotal")}</th>
                   <th>{t("memoryUsed")}</th>
-                  <th>{t("swapTotal")}</th>
-                  <th>{t("swapUsed")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -95,10 +94,8 @@ function NodesPageInner() {
                       <td>{node.nthr ?? "—"}</td>
                       <td>{node.loadRaw ?? "—"}</td>
                       <td>{loadPerCpu ?? "—"}</td>
-                      <td>{node.memtotRaw ?? "—"}</td>
-                      <td>{node.memuseRaw ?? "—"}</td>
-                      <td>{node.swaptoRaw ?? "—"}</td>
-                      <td>{node.swapusRaw ?? "—"}</td>
+                      <td>{formatMemoryGigabytes(node.memtotRaw)}</td>
+                      <td>{formatMemoryGigabytes(node.memuseRaw)}</td>
                     </tr>
                   );
                 })}
