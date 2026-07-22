@@ -33,6 +33,7 @@ function DashboardPageInner() {
   const utilizationPercent = summary.data.totalSlots > 0
     ? Math.round((summary.data.usedSlots / summary.data.totalSlots) * 100)
     : 0;
+  const utilizationBarPercent = Math.max(0, Math.min(utilizationPercent, 100));
 
   return (
     <main className="page">
@@ -76,7 +77,7 @@ function DashboardPageInner() {
           <p className="eyebrow">{t("capacity")}</p>
           <h2>{t("clusterUtilization")}</h2>
           <div className="progress" aria-hidden="true">
-            <span style={{ width: `${utilizationPercent}%` }} />
+            <span style={{ width: `${utilizationBarPercent}%` }} />
           </div>
           <p className="muted">{t("utilizationInUse", { percent: utilizationPercent })}</p>
         </article>
