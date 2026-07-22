@@ -84,7 +84,7 @@ function formatHourlyLabel(value: Date, preset: HistoryPreset) {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    timeZone: "Europe/Budapest",
+    timeZone: "UTC",
   }).format(value);
 }
 
@@ -92,7 +92,7 @@ function formatDailyLabel(value: Date, preset: HistoryPreset) {
   return new Intl.DateTimeFormat("en-GB", {
     month: "short",
     day: preset === "1y" ? undefined : "2-digit",
-    timeZone: "Europe/Budapest",
+    timeZone: "UTC",
   }).format(value);
 }
 
