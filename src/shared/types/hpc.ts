@@ -81,7 +81,7 @@ export interface PaginatedJobs {
 }
 
 export interface HistoryBucket {
-  label: string;
+  bucketStart: string;
   submittedCount: number;
   startedCount: number;
   finishedCount: number;

@@ -1,3 +1,12 @@
+import type { HistoryPreset } from "../../shared/types/hpc";
+import type { Language } from "./ui";
+
+const dateLocales: Record<Language, string> = {
+  en: "en-GB",
+  de: "de-DE",
+  hu: "hu-HU",
+};
+
 export function formatBudapestDateTime(value?: string) {
   if (!value) return "—";
 
@@ -8,6 +17,19 @@ export function formatBudapestDateTime(value?: string) {
     dateStyle: "medium",
     timeStyle: "short",
     timeZone: "Europe/Budapest",
+  }).format(date);
+}
+
+export function formatHistoryBucketLabel(value: string, preset: HistoryPreset, language: Language) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return new Intl.DateTimeFormat(dateLocales[language], {
+    month: preset === "24h" ? undefined : "short",
+    day: preset === "1y" ? undefined : "2-digit",
+    hour: preset === "30d" || preset === "1y" ? undefined : "2-digit",
+    minute: preset === "30d" || preset === "1y" ? undefined : "2-digit",
+    hour12: false,
   }).format(date);
 }
 

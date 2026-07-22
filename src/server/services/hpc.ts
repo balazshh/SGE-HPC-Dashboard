@@ -77,25 +77,6 @@ function matchesQuery(job: JobRecord, query?: string) {
   return job.jobId.includes(normalized) || job.name.toLowerCase().includes(normalized);
 }
 
-function formatHourlyLabel(value: Date, preset: HistoryPreset) {
-  return new Intl.DateTimeFormat("en-GB", {
-    month: preset === "24h" ? undefined : "short",
-    day: preset === "24h" ? undefined : "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "UTC",
-  }).format(value);
-}
-
-function formatDailyLabel(value: Date, preset: HistoryPreset) {
-  return new Intl.DateTimeFormat("en-GB", {
-    month: "short",
-    day: preset === "1y" ? undefined : "2-digit",
-    timeZone: "UTC",
-  }).format(value);
-}
-
 export async function getDashboardSummary(owner: string): Promise<ClusterSummary> {
   const [latest] = await db
     .select()
@@ -210,7 +191,7 @@ export async function getHistory(owner: string, preset: HistoryPreset): Promise<
       .orderBy(userJobHourly.bucketStart);
 
     return rows.map((row) => ({
-      label: formatHourlyLabel(row.bucketStart, preset),
+      bucketStart: row.bucketStart.toISOString(),
       submittedCount: row.submittedCount,
       startedCount: row.startedCount,
       finishedCount: row.finishedCount,
@@ -225,7 +206,7 @@ export async function getHistory(owner: string, preset: HistoryPreset): Promise<
     .orderBy(userJobDaily.bucketDate);
 
   return rows.map((row) => ({
-    label: formatDailyLabel(row.bucketDate, preset),
+    bucketStart: row.bucketDate.toISOString(),
     submittedCount: row.submittedCount,
     startedCount: row.startedCount,
     finishedCount: row.finishedCount,

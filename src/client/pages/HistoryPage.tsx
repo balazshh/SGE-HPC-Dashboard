@@ -4,6 +4,7 @@ import type { HistoryBucket, HistoryPreset } from "../../shared/types/hpc";
 import { AuthGate } from "../components/AuthGate";
 import { MetricCard } from "../components/MetricCard";
 import { useApi } from "../lib/api";
+import { formatHistoryBucketLabel } from "../lib/format";
 import { useUi } from "../lib/ui";
 
 const PRESETS: HistoryPreset[] = ["24h", "7d", "30d", "1y"];
@@ -19,7 +20,7 @@ export function HistoryPage() {
 function HistoryPageInner() {
   const [preset, setPreset] = useState<HistoryPreset>("7d");
   const history = useApi<HistoryBucket[]>(`/api/history?preset=${preset}`);
-  const { t } = useUi();
+  const { language, t } = useUi();
 
   if (history.loading) {
     return <main className="page"><section className="surface">{t("loadingHistory")}</section></main>;
@@ -82,7 +83,7 @@ function HistoryPageInner() {
         </div>
         <div className="history-chart" role="img" aria-label={t("barChartLabel", { preset })}>
           {history.data.map((bucket) => (
-            <div key={bucket.label} className="history-chart__bucket">
+            <div key={bucket.bucketStart} className="history-chart__bucket">
               <div className="history-chart__bars">
                 <span
                   className="history-chart__bar history-chart__bar--finished"
@@ -95,7 +96,7 @@ function HistoryPageInner() {
                   title={`${t("failed")}: ${bucket.failedCount}`}
                 />
               </div>
-              <span className="history-chart__label">{bucket.label}</span>
+              <span className="history-chart__label">{formatHistoryBucketLabel(bucket.bucketStart, preset, language)}</span>
             </div>
           ))}
         </div>
