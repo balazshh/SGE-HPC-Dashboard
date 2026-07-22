@@ -16,7 +16,7 @@ sql_file="$workdir/load-history.sql"
 
 run_command_or_cat "$QACCT_COMMAND" "${QACCT_FILE:-}" > "$qacct_txt"
 
-awk '
+awk -v hpc_tz="$HPC_TZ" '
 function month_num(name) {
   return index("JanFebMarAprMayJunJulAugSepOctNovDec", name) / 3;
 }
@@ -42,6 +42,7 @@ function flush(state_final, submitted_at, started_at, finished_at) {
   print jobnumber, owner, jobname, state_final, submitted_at, started_at, finished_at, (slots == "" ? 1 : slots), qname;
 }
 BEGIN {
+  ENVIRON["TZ"] = hpc_tz;
   reset();
 }
 /^=+$/ {
@@ -78,9 +79,15 @@ function esc(value) {
 function quote(value) {
   return sq esc(value) sq;
 }
+function flush_batch() {
+  if (count > 0) {
+    printf "\nON DUPLICATE KEY UPDATE\n  owner = VALUES(owner),\n  name = VALUES(name),\n  state_final = VALUES(state_final),\n  submitted_at = VALUES(submitted_at),\n  started_at = VALUES(started_at),\n  finished_at = VALUES(finished_at),\n  slots = VALUES(slots),\n  queue = VALUES(queue);\n";
+    count = 0;
+  }
+}
 BEGIN {
   sq = sprintf("%c", 39);
-  prefix = "INSERT IGNORE INTO jobs_history (job_id, owner, name, state_final, submitted_at, started_at, finished_at, slots, queue) VALUES\n";
+  prefix = "INSERT INTO jobs_history (job_id, owner, name, state_final, submitted_at, started_at, finished_at, slots, queue) VALUES\n";
   batch_size = 500;
   count = 0;
 }
@@ -94,13 +101,10 @@ NF {
     printf ",\n%s", row;
   }
   count++;
-  if (count >= batch_size) {
-    printf ";\n";
-    count = 0;
-  }
+  if (count >= batch_size) flush_batch();
 }
 END {
-  if (count > 0) printf ";\n";
+  flush_batch();
 }
 ' "$history_tsv" > "$sql_file"
 

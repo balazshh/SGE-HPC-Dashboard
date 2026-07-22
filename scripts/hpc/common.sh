@@ -16,7 +16,7 @@ load_collector_env() {
   export DB_NAME="${DB_NAME:-}"
   export DB_USER="${DB_USER:-}"
   export DB_PASSWORD="${DB_PASSWORD:-}"
-  export HPC_TZ="${HPC_TZ:-UTC}"
+  export HPC_TZ="${HPC_TZ:-Europe/Budapest}"
   export QSTAT_CLUSTER_COMMAND="${QSTAT_CLUSTER_COMMAND:-qstat -g c}"
   export QSTAT_JOBS_COMMAND="${QSTAT_JOBS_COMMAND:-qstat -u '*'}"
   export QACCT_COMMAND="${QACCT_COMMAND:-qacct}"
@@ -51,6 +51,7 @@ collector_init() {
 
 mysql_exec() {
   MYSQL_PWD="$DB_PASSWORD" mysql \
+    --no-defaults \
     --default-character-set=utf8mb4 \
     -h "$DB_HOST" \
     -P "$DB_PORT" \
@@ -60,6 +61,7 @@ mysql_exec() {
 
 mysql_file() {
   MYSQL_PWD="$DB_PASSWORD" mysql \
+    --no-defaults \
     --default-character-set=utf8mb4 \
     -h "$DB_HOST" \
     -P "$DB_PORT" \
@@ -76,4 +78,17 @@ run_command_or_cat() {
   else
     bash -lc "$command_text"
   fi
+}
+
+normalize_scheduler_time() {
+  local value="${1:-}"
+  [[ -n "$value" ]] || return 1
+
+  case "$value" in
+    Unknown|UNKNOWN|unknown|N/A|n/a|None|NONE|none|""|Unavailable|UNAVAILABLE)
+      return 1
+      ;;
+  esac
+
+  TZ="$HPC_TZ" date -u -d "$value" '+%F %T' 2>/dev/null
 }

@@ -38,7 +38,7 @@ read -r total_slots used_slots free_slots offline_node_count < <(
   ' "$cluster_txt"
 )
 
-awk -v recorded_at="$recorded_at" -v summary_env="$summary_env" '
+awk -v recorded_at="$recorded_at" -v summary_env="$summary_env" -v hpc_tz="$HPC_TZ" '
 function state_group(raw) {
   if (raw == "r" || raw == "t" || raw == "Rr" || raw == "Rt") return "running";
   if (raw == "qw") return "queued";
@@ -55,6 +55,7 @@ function qstat_utc(date_part, time_part, date_bits, time_bits, epoch) {
   return strftime("%Y-%m-%d %H:%M:%S", epoch, 1);
 }
 BEGIN {
+  ENVIRON["TZ"] = hpc_tz;
   running = queued = failed = hold = 0;
 }
 NF && $1 != "job-ID" && $1 !~ /^-+$/ {
