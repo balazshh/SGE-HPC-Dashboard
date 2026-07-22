@@ -263,6 +263,7 @@ p {
   font-weight: var(--font-weight-bold);
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .lede,
