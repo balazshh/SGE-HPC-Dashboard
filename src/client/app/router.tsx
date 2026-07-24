@@ -1,12 +1,6 @@
-import {
-  Link,
-  Outlet,
-  RouterProvider,
-  createRootRoute,
-  createRoute,
-  createRouter,
-} from "@tanstack/react-router";
+import type { ComponentType, ReactNode } from "react";
 
+import { AuthGate } from "../components/AuthGate";
 import { BoschLogo } from "../components/BoschLogo";
 import { UserMenu } from "../components/UserMenu";
 import { useUi } from "../lib/ui";
@@ -17,8 +11,22 @@ import { LoginPage } from "../pages/LoginPage";
 import { NodesPage } from "../pages/NodesPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 
-function AppShell() {
+const routes: Record<string, ComponentType> = {
+  "/": DashboardPage,
+  "/login": LoginPage,
+  "/nodes": NodesPage,
+  "/jobs": JobsPage,
+  "/history": HistoryPage,
+};
+
+function AppShell({ children, pathname }: { children: ReactNode; pathname: string }) {
   const { t } = useUi();
+  const navItems = [
+    ["/", t("navDashboard")],
+    ["/nodes", t("navNodes")],
+    ["/jobs", t("navJobs")],
+    ["/history", t("navHistory")],
+  ];
 
   return (
     <>
@@ -29,84 +37,36 @@ function AppShell() {
             <div className="site-header__left">
               <BoschLogo />
               <nav className="site-nav" aria-label={t("navPrimary")}>
-                <Link to="/" activeProps={{ className: "site-nav__link is-active" }} className="site-nav__link">
-                  {t("navDashboard")}
-                </Link>
-                <Link to="/nodes" activeProps={{ className: "site-nav__link is-active" }} className="site-nav__link">
-                  {t("navNodes")}
-                </Link>
-                <Link to="/jobs" activeProps={{ className: "site-nav__link is-active" }} className="site-nav__link">
-                  {t("navJobs")}
-                </Link>
-                <Link to="/history" activeProps={{ className: "site-nav__link is-active" }} className="site-nav__link">
-                  {t("navHistory")}
-                </Link>
+                {navItems.map(([href, label]) => {
+                  const active = pathname === href;
+                  return (
+                    <a
+                      key={href}
+                      href={href}
+                      className={`site-nav__link${active ? " is-active" : ""}`}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      {label}
+                    </a>
+                  );
+                })}
               </nav>
             </div>
             <UserMenu />
           </div>
         </div>
       </header>
-      <Outlet />
+      {children}
     </>
   );
 }
 
-const rootRoute = createRootRoute({
-  component: AppShell,
-  notFoundComponent: NotFoundPage,
-});
-
-const dashboardRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/",
-  component: DashboardPage,
-});
-
-const loginRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/login",
-  component: LoginPage,
-});
-
-const nodesRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/nodes",
-  component: NodesPage,
-});
-
-const jobsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/jobs",
-  component: JobsPage,
-});
-
-const historyRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/history",
-  component: HistoryPage,
-});
-
-const routeTree = rootRoute.addChildren([
-  dashboardRoute,
-  loginRoute,
-  nodesRoute,
-  jobsRoute,
-  historyRoute,
-]);
-
-const router = createRouter({
-  routeTree,
-  defaultPreload: "intent",
-  defaultNotFoundComponent: NotFoundPage,
-});
-
-declare module "@tanstack/react-router" {
-  interface Register {
-    router: typeof router;
-  }
-}
-
 export function AppRouter() {
-  return <RouterProvider router={router} />;
+  const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
+  const Page = routes[pathname] ?? NotFoundPage;
+  const content = pathname in routes && pathname !== "/login"
+    ? <AuthGate><Page /></AuthGate>
+    : <Page />;
+
+  return <AppShell pathname={pathname}>{content}</AppShell>;
 }

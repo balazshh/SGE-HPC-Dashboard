@@ -1,4 +1,4 @@
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 
 import type {
   ClusterSummary,
@@ -15,14 +15,11 @@ import {
   jobsCurrent,
   jobsHistory,
   nodesCurrent,
-  userJobDaily,
-  userJobHourly,
 } from "../db/schema";
 
 function mapCurrentJob(job: typeof jobsCurrent.$inferSelect): JobRecord {
   return {
     jobId: job.jobId,
-    owner: job.owner,
     name: job.name,
     state: job.stateGroup,
     submittedAt: job.submittedAt.toISOString(),
@@ -41,8 +38,6 @@ function mapNode(node: typeof nodesCurrent.$inferSelect): NodeRecord {
     loadRaw: node.loadRaw,
     memtotRaw: node.memtotRaw,
     memuseRaw: node.memuseRaw,
-    swaptoRaw: node.swaptoRaw,
-    swapusRaw: node.swapusRaw,
     status: node.status,
     lastSeenAt: node.lastSeenAt.toISOString(),
   };
@@ -51,7 +46,6 @@ function mapNode(node: typeof nodesCurrent.$inferSelect): NodeRecord {
 function mapHistoryJob(job: typeof jobsHistory.$inferSelect): JobRecord {
   return {
     jobId: job.jobId,
-    owner: job.owner,
     name: job.name,
     state: job.stateFinal,
     submittedAt: job.submittedAt.toISOString(),
@@ -67,8 +61,13 @@ const presetDays = {
   "1y": 365,
 } as const;
 
-function sinceForPreset(preset: HistoryPreset) {
-  return new Date(Date.now() - presetDays[preset] * 24 * 60 * 60 * 1000);
+function sinceForPreset(preset: HistoryPreset, now = Date.now()) {
+  return new Date(now - presetDays[preset] * 24 * 60 * 60 * 1000);
+}
+
+export function historyCutoff(preset: HistoryPreset, now = Date.now()) {
+  const bucketMs = (preset === "24h" || preset === "7d" ? 60 * 60 : 24 * 60 * 60) * 1000;
+  return new Date(Math.ceil(sinceForPreset(preset, now).getTime() / bucketMs) * bucketMs);
 }
 
 function matchesQuery(job: JobRecord, query?: string) {
@@ -139,11 +138,6 @@ export async function getActiveJobs(owner: string) {
   return rows.map(mapCurrentJob);
 }
 
-export async function getActiveJobsPreview(owner: string) {
-  const jobs = await getActiveJobs(owner);
-  return jobs.slice(0, 5);
-}
-
 export async function getJobHistory(owner: string, input: JobsFilterInput = {}): Promise<PaginatedJobs> {
   const page = Math.max(1, input.page ?? 1);
   const pageSize = Math.max(1, Math.min(100, input.pageSize ?? 10));
@@ -159,12 +153,9 @@ export async function getJobHistory(owner: string, input: JobsFilterInput = {}):
 
   const items = rows.map(mapHistoryJob);
 
-  const filtered = items.filter((job) => {
-    const finishedDate = new Date(job.finishedAt ?? job.submittedAt);
-    const matchesState = state === "all" || job.state === state;
-    const matchesPreset = finishedDate >= since;
-    return matchesState && matchesPreset && matchesQuery(job, input.query);
-  });
+  const filtered = items.filter((job) =>
+    (state === "all" || job.state === state) && matchesQuery(job, input.query)
+  );
 
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -181,35 +172,20 @@ export async function getJobHistory(owner: string, input: JobsFilterInput = {}):
 }
 
 export async function getHistory(owner: string, preset: HistoryPreset): Promise<HistoryBucket[]> {
-  const since = sinceForPreset(preset);
+  const bucket = preset === "24h" || preset === "7d"
+    ? sql<string>`DATE_FORMAT(${jobsHistory.finishedAt}, '%Y-%m-%dT%H:00:00.000Z')`
+    : sql<string>`DATE_FORMAT(${jobsHistory.finishedAt}, '%Y-%m-%dT00:00:00.000Z')`;
 
-  if (preset === "24h" || preset === "7d") {
-    const rows = await db
-      .select()
-      .from(userJobHourly)
-      .where(and(eq(userJobHourly.owner, owner), gte(userJobHourly.bucketStart, since)))
-      .orderBy(userJobHourly.bucketStart);
-
-    return rows.map((row) => ({
-      bucketStart: row.bucketStart.toISOString(),
-      submittedCount: row.submittedCount,
-      startedCount: row.startedCount,
-      finishedCount: row.finishedCount,
-      failedCount: row.failedCount,
-    }));
-  }
-
-  const rows = await db
-    .select()
-    .from(userJobDaily)
-    .where(and(eq(userJobDaily.owner, owner), gte(userJobDaily.bucketDate, since)))
-    .orderBy(userJobDaily.bucketDate);
-
-  return rows.map((row) => ({
-    bucketStart: row.bucketDate.toISOString(),
-    submittedCount: row.submittedCount,
-    startedCount: row.startedCount,
-    finishedCount: row.finishedCount,
-    failedCount: row.failedCount,
-  }));
+  return db
+    .select({
+      bucketStart: bucket,
+      submittedCount: sql<number>`COUNT(*)`.mapWith(Number),
+      startedCount: sql<number>`SUM(${jobsHistory.startedAt} IS NOT NULL)`.mapWith(Number),
+      finishedCount: sql<number>`SUM(${jobsHistory.stateFinal} = 'finished')`.mapWith(Number),
+      failedCount: sql<number>`SUM(${jobsHistory.stateFinal} = 'error')`.mapWith(Number),
+    })
+    .from(jobsHistory)
+    .where(and(eq(jobsHistory.owner, owner), gte(jobsHistory.finishedAt, historyCutoff(preset))))
+    .groupBy(bucket)
+    .orderBy(bucket);
 }

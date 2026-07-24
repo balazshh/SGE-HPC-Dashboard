@@ -1,7 +1,6 @@
 import { useState } from "react";
 
 import type { HistoryBucket, HistoryPreset } from "../../shared/types/hpc";
-import { AuthGate } from "../components/AuthGate";
 import { MetricCard } from "../components/MetricCard";
 import { useApi } from "../lib/api";
 import { formatHistoryBucketLabel } from "../lib/format";
@@ -10,14 +9,6 @@ import { useUi } from "../lib/ui";
 const PRESETS: HistoryPreset[] = ["24h", "7d", "30d", "1y"];
 
 export function HistoryPage() {
-  return (
-    <AuthGate>
-      <HistoryPageInner />
-    </AuthGate>
-  );
-}
-
-function HistoryPageInner() {
   const [preset, setPreset] = useState<HistoryPreset>("7d");
   const history = useApi<HistoryBucket[]>(`/api/history?preset=${preset}`);
   const { language, t } = useUi();

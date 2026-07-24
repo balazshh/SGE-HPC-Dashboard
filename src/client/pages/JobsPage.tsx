@@ -1,7 +1,6 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import type { CanonicalJobState, JobRecord, PaginatedJobs } from "../../shared/types/hpc";
-import { AuthGate } from "../components/AuthGate";
 import { StatusPill } from "../components/StatusPill";
 import { useApi } from "../lib/api";
 import { formatBudapestDateTime } from "../lib/format";
@@ -12,32 +11,19 @@ const ALL_STATES = ["all", "queued", "running", "hold", "suspended", "error", "f
 const PRESETS = ["7d", "30d", "1y"] as const;
 
 export function JobsPage() {
-  return (
-    <AuthGate>
-      <JobsPageInner />
-    </AuthGate>
-  );
-}
-
-function JobsPageInner() {
   const [query, setQuery] = useState("");
   const [state, setState] = useState<(typeof ALL_STATES)[number]>("all");
   const [preset, setPreset] = useState<(typeof PRESETS)[number]>("30d");
   const [page, setPage] = useState(1);
   const { statusLabel, t } = useUi();
 
-  const historyPath = useMemo(() => {
-    const params = new URLSearchParams({
-      state,
-      preset,
-      page: String(page),
-      pageSize: String(PAGE_SIZE),
-    });
-
-    if (query) params.set("query", query);
-
-    return `/api/jobs/history?${params.toString()}`;
-  }, [page, preset, query, state]);
+  const historyPath = `/api/jobs/history?${new URLSearchParams({
+    query,
+    state,
+    preset,
+    page: String(page),
+    pageSize: String(PAGE_SIZE),
+  })}`;
 
   const activeJobs = useApi<JobRecord[]>("/api/jobs/active");
   const history = useApi<PaginatedJobs>(historyPath);

@@ -123,13 +123,6 @@ select {
   min-width: 0;
 }
 
-.user-menu__controls {
-  display: flex;
-  align-items: center;
-  gap: calc(var(--space-unit) * 1.5);
-  white-space: nowrap;
-}
-
 .user-menu__identity {
   display: grid;
   justify-items: end;
@@ -228,12 +221,6 @@ label {
 
 .section-title-row--stack {
   flex-direction: column;
-}
-
-.page-header__meta {
-  min-width: 180px;
-  display: grid;
-  gap: var(--space-unit);
 }
 
 h1,
@@ -380,17 +367,10 @@ legend {
 }
 
 .progress {
+  width: 100%;
   height: 24px;
-  background: var(--color-background-alt);
-  border: 1px solid var(--color-border);
   margin: calc(var(--space-unit) * 3) 0;
-  overflow: hidden;
-}
-
-.progress span {
-  display: block;
-  height: 100%;
-  background: var(--bosch-blue);
+  accent-color: var(--bosch-blue);
 }
 
 .btn {

@@ -1,140 +1,65 @@
 # SGE HPC Dashboard
 
-This app shows SGE cluster status, nodes, your jobs, and your job history.
+Dashboard for SGE cluster status, nodes, active jobs, and one year of per-user job history.
 
-It has 2 parts:
+- The Bun web app runs on the web VM and reads MySQL.
+- Shell collectors run beside SGE and write MySQL.
+- Microsoft Entra ID supplies the signed-in user's HPC login.
 
-1. **Web app** on the web VM
-2. **Collectors** on the HPC side
+## Requirements
 
-The web app reads MySQL.
-The collectors fill MySQL.
+**Web VM:** Docker, MySQL 8+, Nginx, HTTPS URL, and Entra app credentials.
 
-If the collectors do not run, the dashboard will be empty.
+**SGE host:** `qstat`, `qhost`, `qacct`, cron, and network access to the same MySQL database.
 
----
-
-## What you need
-
-### On the web VM
-
-- Docker
-- MySQL 8+
-- Nginx
-- a public URL for the app
-- Entra ID app credentials
-
-### On the HPC side
-
-- `qstat -g c`
-- `qstat -u '*'`
-- `qhost`
-- `qacct`
-- cron
-- network access to the same MySQL database
-
----
-
-## 1. Copy the repo
+## Web app
 
 ```bash
-cd /d
-git clone https://github.com/balazshh/SGE-HPC-Dashboard.git hpc-dashboard-test
-cd /d/hpc-dashboard-test
-cp .env.example /d/.env
+git clone https://github.com/balazshh/SGE-HPC-Dashboard.git hpc-dashboard
+cd hpc-dashboard
+cp .env.example .env
 ```
 
----
+Fill `.env`; `APP_BASE_URL` must be the final HTTPS URL and all Entra values are required.
 
-## 2. Fill `.env`
+### Database
 
-Open `/d/.env` and set real values:
-
-```env
-APP_BASE_URL=https://your-dashboard.example.com
-PORT=3001
-BETTER_AUTH_SECRET=put-a-long-random-secret-here
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=hpc_dashboard_test_db
-DB_USER=hpc_dashboard_test_db_user
-DB_PASSWORD=change-me
-ENTRA_CLIENT_ID=your-client-id
-ENTRA_TENANT_ID=your-tenant-id
-ENTRA_CLIENT_SECRET=your-client-secret
-```
-
-Rules:
-
-- `APP_BASE_URL` must be the final HTTPS URL
-- Entra values are required
-- the app will not work without MySQL
-
----
-
-## 3. Create the database
-
-Do this once on the web VM. Assume you are already inside MySQL.
+For a fresh database, create the database/user, then apply both schema files in order:
 
 ```sql
-DROP DATABASE IF EXISTS `hpc_dashboard_test_db`;
-CREATE DATABASE `hpc_dashboard_test_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS 'hpc_dashboard_test_db_user'@'%' IDENTIFIED BY 'change-me';
-GRANT ALL PRIVILEGES ON `hpc_dashboard_test_db`.* TO 'hpc_dashboard_test_db_user'@'%';
-FLUSH PRIVILEGES;
-USE `hpc_dashboard_test_db`;
+CREATE DATABASE hpc_dashboard_test_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'hpc_dashboard_test_db_user'@'%' IDENTIFIED BY 'change-me';
+GRANT ALL PRIVILEGES ON hpc_dashboard_test_db.* TO 'hpc_dashboard_test_db_user'@'%';
+USE hpc_dashboard_test_db;
 SOURCE drizzle/0000_initial.sql;
+SOURCE drizzle/0001_ponytail_cleanup.sql;
 ```
 
-This is the easiest safe path for a fresh test deploy.
+Keep these database names aligned with `.env` and `scripts/hpc/collector.env`. `0001_ponytail_cleanup.sql` removes obsolete collector columns and rollup tables. Existing installations must follow the coordinated upgrade below before applying it.
 
----
-
-## 4. Build the Docker image
-
-Without proxy:
+### Build and run
 
 ```bash
-cd /d/hpc-dashboard-test
-docker build --network=host -t hpc-dashboard-test -f Containerfile .
-```
-
-With proxy:
-
-```bash
-cd /d/hpc-dashboard-test
-docker build --network=host \
-  --build-arg http_proxy=http://<proxy-host>:<proxy-port> \
-  --build-arg https_proxy=http://<proxy-host>:<proxy-port> \
-  -t hpc-dashboard-test \
-  -f Containerfile .
-```
-
----
-
-## 5. Start the app
-
-```bash
-docker rm -f hpc-dashboard-test 2>/dev/null || true && docker run -d --name hpc-dashboard-test --env-file /d/.env -p 127.0.0.1:3001:3001 --restart unless-stopped hpc-dashboard-test
-```
-
-Check it:
-
-```bash
+docker build --network=host -t hpc-dashboard -f Containerfile .
+docker rm -f hpc-dashboard 2>/dev/null || true
+docker run -d \
+  --name hpc-dashboard \
+  --env-file .env \
+  -p 127.0.0.1:3001:3001 \
+  --restart unless-stopped \
+  hpc-dashboard
 curl http://127.0.0.1:3001/api/health
 ```
 
-You should get:
+Expected response:
 
 ```json
-{"ok":true,"authMode":"entra"}
+{"ok":true}
 ```
 
----
+For a proxied build, add the required `--build-arg http_proxy=...` and `--build-arg https_proxy=...` flags to `docker build`.
 
-## 6. Put Nginx in front
-
-Create `/etc/nginx/conf.d/hpc-dashboard.conf`:
+### Nginx
 
 ```nginx
 server {
@@ -154,148 +79,70 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
-
-server {
-    listen 80;
-    server_name your-dashboard.example.com;
-    return 301 https://$host$request_uri;
-}
 ```
 
-Reload Nginx:
+Validate and reload with `nginx -t && systemctl reload nginx`.
+
+## SGE collectors
+
+On the SGE host:
 
 ```bash
-nginx -t
-systemctl reload nginx
-```
-
----
-
-## 7. Set up the HPC collectors
-
-Do this on the HPC side, not on the web VM.
-
-### 7.1 Copy the collector env file
-
-```bash
-cd /path/to/SGE-HPC-Dashboard
 cp scripts/hpc/collector.env.example scripts/hpc/collector.env
-```
-
-### 7.2 Fill `scripts/hpc/collector.env`
-
-```env
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_NAME=hpc_dashboard_test_db
-DB_USER=hpc_dashboard_test_db_user
-DB_PASSWORD=change-me
-HPC_TZ=Europe/Budapest
-QSTAT_CLUSTER_COMMAND='qstat -g c'
-QSTAT_JOBS_COMMAND="qstat -u '*'"
-QHOST_COMMAND='qhost'
-QACCT_COMMAND='qacct'
-```
-
-### 7.3 Run the collectors once by hand
-
-```bash
+# Fill the database values, then verify parser/SQL generation:
+./scripts/hpc/self-check.sh
 ./scripts/hpc/collect-live.sh
 ./scripts/hpc/collect-history.sh
-./scripts/hpc/aggregate-rollups.sh
 ./scripts/hpc/cleanup-old-data.sh
 ```
 
-If these work, cron will work too.
-
-### 7.4 Add cron
+Install only these cron jobs:
 
 ```cron
-* * * * * cd /path/to/SGE-HPC-Dashboard && ./scripts/hpc/collect-live.sh >> /var/log/hpc-dashboard-live.log 2>&1
-*/10 * * * * cd /path/to/SGE-HPC-Dashboard && ./scripts/hpc/collect-history.sh >> /var/log/hpc-dashboard-history.log 2>&1
-*/15 * * * * cd /path/to/SGE-HPC-Dashboard && ./scripts/hpc/aggregate-rollups.sh >> /var/log/hpc-dashboard-rollups.log 2>&1
-30 2 * * * cd /path/to/SGE-HPC-Dashboard && ./scripts/hpc/cleanup-old-data.sh >> /var/log/hpc-dashboard-cleanup.log 2>&1
+* * * * * cd /opt/hpc-dashboard && ./scripts/hpc/collect-live.sh >> /var/log/hpc-dashboard-live.log 2>&1
+*/10 * * * * cd /opt/hpc-dashboard && ./scripts/hpc/collect-history.sh >> /var/log/hpc-dashboard-history.log 2>&1
+30 2 * * * cd /opt/hpc-dashboard && ./scripts/hpc/cleanup-old-data.sh >> /var/log/hpc-dashboard-cleanup.log 2>&1
 ```
 
----
+History charts now group the indexed `jobs_history` table directly; there is no rollup job.
 
-## 8. Open the site
+## Existing-install upgrade
 
-Open:
+`0001_ponytail_cleanup.sql` is destructive. Back up MySQL first; restoring removed columns requires that backup.
 
-```txt
-https://your-dashboard.example.com
-```
+1. Build and deploy the new web image. It works while the old extra columns still exist.
+2. Disable the old live, history, rollup, and cleanup cron entries; wait for running collectors to finish.
+3. Apply the migration:
 
-Sign in with Entra ID.
+   ```sql
+   USE hpc_dashboard_test_db;
+   SOURCE drizzle/0001_ponytail_cleanup.sql;
+   ```
 
-If login works and collectors are writing data, the dashboard, nodes page, jobs page, and history page are ready.
+4. Install the new collector scripts and run `self-check.sh`, `collect-live.sh`, `collect-history.sh`, and `cleanup-old-data.sh` once.
+5. Restore only the three cron entries shown above.
 
----
+Do not run old collectors after `0001`; they still target the removed columns.
 
-## Update later
-
-When you want a new version:
+## Normal update
 
 ```bash
-cd /d/hpc-dashboard-test
 git pull
-docker build --network=host -t hpc-dashboard-test -f Containerfile .
-docker rm -f hpc-dashboard-test 2>/dev/null || true && docker run -d --name hpc-dashboard-test --env-file /d/.env -p 127.0.0.1:3001:3001 --restart unless-stopped hpc-dashboard-test
+docker build --network=host -t hpc-dashboard -f Containerfile .
+docker rm -f hpc-dashboard 2>/dev/null || true
+docker run -d --name hpc-dashboard --env-file .env -p 127.0.0.1:3001:3001 --restart unless-stopped hpc-dashboard
 ```
 
-If you need proxy on update too:
+Apply any new numbered SQL migration exactly once, in filename order.
 
-```bash
-cd /d/hpc-dashboard-test
-git pull
-docker build --network=host \
-  --build-arg http_proxy=http://<proxy-host>:<proxy-port> \
-  --build-arg https_proxy=http://<proxy-host>:<proxy-port> \
-  -t hpc-dashboard-test \
-  -f Containerfile .
-docker rm -f hpc-dashboard-test 2>/dev/null || true && docker run -d --name hpc-dashboard-test --env-file /d/.env -p 127.0.0.1:3001:3001 --restart unless-stopped hpc-dashboard-test
-```
-
-If the app schema changes in the future, assume you are already inside MySQL and run:
-
-```sql
-USE `hpc_dashboard_test_db`;
-SOURCE drizzle/<new-schema-file>.sql;
-```
-
----
-
-## Very short troubleshooting
-
-### The app does not open
-
-Check:
+## Troubleshooting
 
 ```bash
 curl http://127.0.0.1:3001/api/health
-docker logs hpc-dashboard-test
+docker logs hpc-dashboard
 nginx -t
 ```
 
-### Login fails
-
-Check these values in `.env`:
-
-- `APP_BASE_URL`
-- `BETTER_AUTH_SECRET`
-- `ENTRA_CLIENT_ID`
-- `ENTRA_TENANT_ID`
-- `ENTRA_CLIENT_SECRET`
-
-### The page opens but shows no data
-
-That usually means the collectors are not running or cannot write to MySQL.
-
-Run these again on the HPC side:
-
-```bash
-./scripts/hpc/collect-live.sh
-./scripts/hpc/collect-history.sh
-./scripts/hpc/aggregate-rollups.sh
-```
+- Login failure: check `APP_BASE_URL`, `BETTER_AUTH_SECRET`, and all `ENTRA_*` values.
+- Empty/stale pages: run the collectors manually and check their MySQL access.
+- Collector failure after upgrade: confirm `0001_ponytail_cleanup.sql` and the new collector scripts were deployed together.

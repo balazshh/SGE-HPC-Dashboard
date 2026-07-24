@@ -1,9 +1,8 @@
 import type { HistoryPreset, JobsFilterInput } from "../shared/types/hpc";
 import { env } from "./config/env";
-import { getSessionInfo, handleAuthRequest } from "./auth";
+import { getHpcUsername, handleAuthRequest } from "./auth";
 import {
   getActiveJobs,
-  getActiveJobsPreview,
   getDashboardSummary,
   getHistory,
   getJobHistory,
@@ -29,8 +28,8 @@ function readInt(value: string | null, fallback: number, min: number, max: numbe
 }
 
 async function withUser(request: Request, run: (hpcUsername: string) => Promise<Response> | Response) {
-  const user = (await getSessionInfo(request)).user;
-  return user ? run(user.hpcUsername) : json({ error: "Authentication required" }, 401);
+  const username = await getHpcUsername(request);
+  return username ? run(username) : json({ error: "Authentication required" }, 401);
 }
 
 function serveSpa(pathname: string) {
@@ -45,7 +44,7 @@ function serveSpa(pathname: string) {
     });
   }
 
-  return json({ error: "Frontend build not found. Run bun run build or use Vite on :5173." }, 404);
+  return json({ error: "Frontend build not found. Run bun run build." }, 404);
 }
 
 Bun.serve({
@@ -59,20 +58,15 @@ Bun.serve({
     }
 
     if (url.pathname === "/api/health") {
-      return json({ ok: true, authMode: "entra" });
+      return json({ ok: true });
     }
 
     if (url.pathname === "/api/dashboard/summary") {
       return withUser(request, async (hpcUsername) => json(await getDashboardSummary(hpcUsername)));
     }
 
-    if (url.pathname === "/api/dashboard/jobs-preview") {
-      return withUser(request, async (hpcUsername) => json(await getActiveJobsPreview(hpcUsername)));
-    }
-
     if (url.pathname === "/api/nodes") {
-      const user = (await getSessionInfo(request)).user;
-      return user ? json(await getNodes()) : json({ error: "Authentication required" }, 401);
+      return withUser(request, async () => json(await getNodes()));
     }
 
     if (url.pathname === "/api/jobs/active") {

@@ -1,7 +1,4 @@
-import { Link } from "@tanstack/react-router";
-
 import type { ClusterSummary, JobRecord } from "../../shared/types/hpc";
-import { AuthGate } from "../components/AuthGate";
 import { FreshnessBanner } from "../components/FreshnessBanner";
 import { MetricCard } from "../components/MetricCard";
 import { StatusPill } from "../components/StatusPill";
@@ -10,16 +7,8 @@ import { useApi } from "../lib/api";
 import { useUi } from "../lib/ui";
 
 export function DashboardPage() {
-  return (
-    <AuthGate>
-      <DashboardPageInner />
-    </AuthGate>
-  );
-}
-
-function DashboardPageInner() {
   const summary = useApi<ClusterSummary>("/api/dashboard/summary");
-  const myJobs = useApi<JobRecord[]>("/api/dashboard/jobs-preview");
+  const myJobs = useApi<JobRecord[]>("/api/jobs/active");
   const { t } = useUi();
 
   if (summary.loading || myJobs.loading) {
@@ -76,9 +65,14 @@ function DashboardPageInner() {
         <article className="surface">
           <p className="eyebrow">{t("capacity")}</p>
           <h2>{t("clusterUtilization")}</h2>
-          <div className="progress" aria-hidden="true">
-            <span style={{ width: `${utilizationBarPercent}%` }} />
-          </div>
+          <progress
+            className="progress"
+            max={100}
+            value={utilizationBarPercent}
+            aria-label={t("clusterUtilization")}
+          >
+            {utilizationPercent}%
+          </progress>
           <p className="muted">{t("utilizationInUse", { percent: utilizationPercent })}</p>
         </article>
       </section>
@@ -89,7 +83,7 @@ function DashboardPageInner() {
             <p className="eyebrow">{t("myJobs")}</p>
             <h2>{t("activeJobsPreview")}</h2>
           </div>
-          <Link className="btn btn-secondary" to="/jobs">{t("openMyJobs")}</Link>
+          <a className="btn btn-secondary" href="/jobs">{t("openMyJobs")}</a>
         </div>
         {myJobs.data.length ? (
           <div className="table-wrap">
@@ -104,7 +98,7 @@ function DashboardPageInner() {
                 </tr>
               </thead>
               <tbody>
-                {myJobs.data.map((job) => (
+                {myJobs.data.slice(0, 5).map((job) => (
                   <tr key={job.jobId}>
                     <td>{job.jobId}</td>
                     <td>{job.name}</td>

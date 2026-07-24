@@ -5,8 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=./common.sh
 source "$SCRIPT_DIR/common.sh"
 collector_init
-require_cmd qstat
-require_cmd qhost
+require_cmd_if_no_file qstat "${QSTAT_CLUSTER_FILE:-}"
+require_cmd_if_no_file qstat "${QSTAT_JOBS_FILE:-}"
+require_cmd_if_no_file qhost "${QHOST_FILE:-}"
 
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
@@ -38,7 +39,7 @@ read -r total_slots used_slots free_slots offline_node_count < <(
   ' "$cluster_txt"
 )
 
-awk -v recorded_at="$recorded_at" -v summary_env="$summary_env" -v hpc_tz="$HPC_TZ" '
+awk -v summary_env="$summary_env" -v hpc_tz="$HPC_TZ" '
 function state_group(raw) {
   if (raw == "r" || raw == "t" || raw == "Rr" || raw == "Rt") return "running";
   if (raw == "qw") return "queued";
@@ -66,14 +67,12 @@ NF && $1 != "job-ID" && $1 !~ /^-+$/ {
   state = state_group(state_raw);
   submitted_at = qstat_utc($6, $7);
   started_at = state == "running" ? submitted_at : "";
-  slots = $NF + 0;
-
   if (state == "running") running++;
   else if (state == "queued") queued++;
   else if (state == "error") failed++;
   else if (state == "hold") hold++;
 
-  print job_id, owner, name, state_raw, state, submitted_at, started_at, slots, recorded_at;
+  print job_id, owner, name, state, submitted_at, started_at;
 }
 END {
   printf("running_jobs=%d\nqueued_jobs=%d\nfailed_jobs=%d\nhold_jobs=%d\n", running, queued, failed, hold) > summary_env;
@@ -88,8 +87,8 @@ function int_or_empty(value) {
   return value == "-" ? "" : value + 0;
 }
 NF && $1 != "HOSTNAME" && $1 != "global" && $1 !~ /^-+$/ {
-  status = $2 == "-" ? "missing" : (($7 == "-" || $8 == "-" || $9 == "-" || $10 == "-" || $11 == "-") ? "partial" : "ok");
-  print $1, empty_if_dash($2), int_or_empty($3), int_or_empty($4), int_or_empty($5), int_or_empty($6), empty_if_dash($7), empty_if_dash($8), empty_if_dash($9), empty_if_dash($10), empty_if_dash($11), status, recorded_at;
+  status = $2 == "-" ? "missing" : (($7 == "-" || $8 == "-" || $9 == "-") ? "partial" : "ok");
+  print $1, empty_if_dash($2), int_or_empty($3), int_or_empty($4), int_or_empty($5), int_or_empty($6), empty_if_dash($7), empty_if_dash($8), empty_if_dash($9), status, recorded_at;
 }
 ' OFS='\t' "$qhost_txt" > "$nodes_tsv"
 
@@ -102,6 +101,7 @@ fi
 
 cat > "$sql_file" <<SQL
 START TRANSACTION;
+DELETE FROM cluster_snapshots;
 INSERT INTO cluster_snapshots
   (recorded_at, total_slots, used_slots, free_slots, running_jobs, queued_jobs, failed_jobs, hold_jobs, health_status, offline_node_count)
 VALUES
@@ -121,13 +121,13 @@ function quote(value) {
 }
 BEGIN {
   sq = sprintf("%c", 39);
-  prefix = "INSERT INTO jobs_current (job_id, owner, name, state_raw, state_group, submitted_at, started_at, slots, last_seen_at) VALUES\n";
+  prefix = "INSERT INTO jobs_current (job_id, owner, name, state_group, submitted_at, started_at) VALUES\n";
   batch_size = 500;
   count = 0;
 }
 NF {
-  started_at = $7 == "" ? "NULL" : quote($7);
-  row = "  (" quote($1) ", " quote($2) ", " quote($3) ", " quote($4) ", " quote($5) ", " quote($6) ", " started_at ", " ($8 + 0) ", " quote($9) ")";
+  started_at = $6 == "" ? "NULL" : quote($6);
+  row = "  (" quote($1) ", " quote($2) ", " quote($3) ", " quote($4) ", " quote($5) ", " started_at ")";
   if (count == 0) {
     printf "%s%s", prefix, row;
   } else {
@@ -161,12 +161,12 @@ function sql_int(value) {
 }
 BEGIN {
   sq = sprintf("%c", 39);
-  prefix = "INSERT INTO nodes_current (hostname, arch, ncpu, nsoc, ncor, nthr, load_raw, memtot_raw, memuse_raw, swapto_raw, swapus_raw, status, last_seen_at) VALUES\n";
+  prefix = "INSERT INTO nodes_current (hostname, arch, ncpu, nsoc, ncor, nthr, load_raw, memtot_raw, memuse_raw, status, last_seen_at) VALUES\n";
   batch_size = 500;
   count = 0;
 }
 NF {
-  row = "  (" quote($1) ", " sql_string($2) ", " sql_int($3) ", " sql_int($4) ", " sql_int($5) ", " sql_int($6) ", " sql_string($7) ", " sql_string($8) ", " sql_string($9) ", " sql_string($10) ", " sql_string($11) ", " quote($12) ", " quote($13) ")";
+  row = "  (" quote($1) ", " sql_string($2) ", " sql_int($3) ", " sql_int($4) ", " sql_int($5) ", " sql_int($6) ", " sql_string($7) ", " sql_string($8) ", " sql_string($9) ", " quote($10) ", " quote($11) ")";
   if (count == 0) {
     printf "%s%s", prefix, row;
   } else {

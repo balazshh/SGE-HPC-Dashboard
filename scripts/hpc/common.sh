@@ -29,6 +29,12 @@ require_cmd() {
   }
 }
 
+require_cmd_if_no_file() {
+  local command_name="$1"
+  local input_file="${2:-}"
+  [[ -n "$input_file" ]] || require_cmd "$command_name"
+}
+
 require_env() {
   local name="$1"
   [[ -n "${!name:-}" ]] || {
@@ -78,17 +84,4 @@ run_command_or_cat() {
   else
     bash -lc "$command_text"
   fi
-}
-
-normalize_scheduler_time() {
-  local value="${1:-}"
-  [[ -n "$value" ]] || return 1
-
-  case "$value" in
-    Unknown|UNKNOWN|unknown|N/A|n/a|None|NONE|none|""|Unavailable|UNAVAILABLE)
-      return 1
-      ;;
-  esac
-
-  TZ="$HPC_TZ" date -u -d "$value" '+%F %T' 2>/dev/null
 }

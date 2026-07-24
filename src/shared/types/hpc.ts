@@ -11,18 +11,6 @@ export type CanonicalJobState =
 
 export type FreshnessLevel = "fresh" | "warn" | "stale" | "broken";
 export type HistoryPreset = "24h" | "7d" | "30d" | "1y";
-export type AuthMode = "entra";
-
-export interface SessionUser {
-  name: string;
-  email: string;
-  hpcUsername: string;
-}
-
-export interface SessionInfo {
-  user: SessionUser | null;
-  authMode: AuthMode;
-}
 
 export interface ClusterSummary {
   updatedAt: string;
@@ -48,15 +36,12 @@ export interface NodeRecord {
   loadRaw: string | null;
   memtotRaw: string | null;
   memuseRaw: string | null;
-  swaptoRaw: string | null;
-  swapusRaw: string | null;
   status: NodeStatus;
   lastSeenAt: string;
 }
 
 export interface JobRecord {
   jobId: string;
-  owner: string;
   name: string;
   state: CanonicalJobState;
   submittedAt: string;

@@ -3,7 +3,6 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { genericOAuth } from "better-auth/plugins";
 import { desc, eq } from "drizzle-orm";
 
-import type { SessionInfo, SessionUser } from "../../shared/types/hpc";
 import { env } from "../config/env";
 import { db } from "../db";
 import * as authSchema from "../db/schema/auth";
@@ -25,14 +24,8 @@ function readPreferredUsernameClaim(idToken?: string | null) {
   }
 }
 
-function mapAuthUser(user: { name?: string | null; email?: string | null }, hpcLogin?: string) {
-  if (!user.email) return null;
-
-  return {
-    name: user.name || user.email,
-    email: user.email,
-    hpcUsername: normalizeHpcUsername(hpcLogin || user.email),
-  } satisfies SessionUser;
+function hpcUsernameFor(user: { email?: string | null }, hpcLogin?: string) {
+  return user.email ? normalizeHpcUsername(hpcLogin || user.email) : null;
 }
 
 const missingEntraEnv = [
@@ -72,11 +65,9 @@ const auth = betterAuth({
   ],
 });
 
-export async function getSessionInfo(request: Request): Promise<SessionInfo> {
+export async function getHpcUsername(request: Request) {
   const session = await auth.api.getSession({ headers: request.headers });
-  if (!session?.user) {
-    return { user: null, authMode: "entra" };
-  }
+  if (!session?.user) return null;
 
   const [account] = session.user.id
     ? await db
@@ -87,10 +78,7 @@ export async function getSessionInfo(request: Request): Promise<SessionInfo> {
       .limit(1)
     : [];
 
-  return {
-    user: mapAuthUser(session.user, readPreferredUsernameClaim(account?.idToken)),
-    authMode: "entra",
-  };
+  return hpcUsernameFor(session.user, readPreferredUsernameClaim(account?.idToken));
 }
 
 export function handleAuthRequest(request: Request) {

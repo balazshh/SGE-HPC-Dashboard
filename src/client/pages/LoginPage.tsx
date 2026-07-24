@@ -1,19 +1,17 @@
 import { useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
 
 import { authClient } from "../lib/auth-client";
 import { useUi } from "../lib/ui";
 
 export function LoginPage() {
-  const navigate = useNavigate();
   const session = authClient.useSession();
   const { t } = useUi();
 
   useEffect(() => {
     if (session.data?.user) {
-      navigate({ to: "/", replace: true });
+      window.location.replace("/");
     }
-  }, [navigate, session.data?.user]);
+  }, [session.data?.user]);
 
   if (session.isPending) {
     return <main className="page page--centered"><section className="surface auth-card">{t("loadingSignIn")}</section></main>;

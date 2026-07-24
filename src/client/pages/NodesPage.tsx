@@ -1,5 +1,4 @@
 import type { NodeRecord } from "../../shared/types/hpc";
-import { AuthGate } from "../components/AuthGate";
 import { MetricCard } from "../components/MetricCard";
 import { StatusPill } from "../components/StatusPill";
 import { useApi } from "../lib/api";
@@ -12,14 +11,6 @@ function readNumber(value?: string | null) {
 }
 
 export function NodesPage() {
-  return (
-    <AuthGate>
-      <NodesPageInner />
-    </AuthGate>
-  );
-}
-
-function NodesPageInner() {
   const nodes = useApi<NodeRecord[]>("/api/nodes");
   const { t } = useUi();
 

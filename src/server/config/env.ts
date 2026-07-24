@@ -20,7 +20,7 @@ function readOptionalInt(name: string, fallback: number) {
 
 export const env = {
   port: readOptionalInt("PORT", 3001),
-  appBaseUrl: process.env.APP_BASE_URL ?? "http://localhost:5173",
+  appBaseUrl: process.env.APP_BASE_URL ?? "http://localhost:3001",
   betterAuthSecret: process.env.BETTER_AUTH_SECRET ?? "",
   dbHost: readEnv("DB_HOST", "127.0.0.1"),
   dbPort: readOptionalInt("DB_PORT", 3306),

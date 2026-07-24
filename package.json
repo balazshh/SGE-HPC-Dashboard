@@ -4,11 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && rm -rf dist && bun build index.html --outdir dist --target browser --minify --public-path /",
     "start": "bun src/server/index.ts"
   },
   "dependencies": {
-    "@tanstack/react-router": "^1.121.21",
     "better-auth": "1.5.5",
     "drizzle-orm": "^0.44.2",
     "mysql2": "^3.14.2",
@@ -18,9 +17,7 @@
   "devDependencies": {
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
-    "@vitejs/plugin-react": "^5.0.2",
     "bun-types": "^1.2.18",
-    "typescript": "^5.8.3",
-    "vite": "^7.0.4"
+    "typescript": "^5.8.3"
   }
 }
