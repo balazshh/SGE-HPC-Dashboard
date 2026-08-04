@@ -18,7 +18,7 @@ run_command_or_cat "$QACCT_COMMAND" "${QACCT_FILE:-}" > "$qacct_txt"
 
 awk -v hpc_tz="$HPC_TZ" '
 function month_num(name) {
-  return index("JanFebMarAprMayJunJulAugSepOctNovDec", name) / 3;
+  return int((index("JanFebMarAprMayJunJulAugSepOctNovDec", name) - 1) / 3) + 1;
 }
 function qacct_utc(value, parts, month, day, year, clock, epoch) {
   gsub(/^[[:space:]]+|[[:space:]]+$/, "", value);

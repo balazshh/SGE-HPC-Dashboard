@@ -16,7 +16,6 @@ export function formatBudapestDateTime(value?: string) {
   return new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
-    timeZone: "Europe/Budapest",
   }).format(date);
 }
 
@@ -30,7 +29,6 @@ export function formatHistoryBucketLabel(value: string, preset: HistoryPreset, l
     hour: preset === "30d" || preset === "1y" ? undefined : "2-digit",
     minute: preset === "30d" || preset === "1y" ? undefined : "2-digit",
     hour12: false,
-    timeZone: "Europe/Budapest",
   }).format(date);
 }
 

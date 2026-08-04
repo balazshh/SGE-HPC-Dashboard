@@ -62,7 +62,7 @@ export DB_HOST=stub
 export DB_NAME=stub
 export DB_USER=stub
 export DB_PASSWORD=stub
-export HPC_TZ=UTC
+export HPC_TZ=Europe/Budapest
 export QSTAT_CLUSTER_FILE="$workdir/qstat-cluster.txt"
 export QSTAT_JOBS_FILE="$workdir/qstat-jobs.txt"
 export QHOST_FILE="$workdir/qhost.txt"
@@ -72,6 +72,7 @@ export QACCT_FILE="$workdir/qacct.txt"
 grep -q "16, 4, 12" "$mysql_capture"
 grep -q "'running'" "$mysql_capture"
 grep -q "'hold'" "$mysql_capture"
+grep -q "'2026-07-08 08:00:00'" "$mysql_capture"
 grep -q "'missing'" "$mysql_capture"
 grep -q 'INSERT INTO jobs_current (job_id, owner, name, state_group, submitted_at, started_at)' "$mysql_capture"
 ! grep -q 'state_raw\|swapto_raw\|swapus_raw' "$mysql_capture"
@@ -79,6 +80,7 @@ grep -q 'INSERT INTO jobs_current (job_id, owner, name, state_group, submitted_a
 "$SCRIPT_DIR/collect-history.sh" >/dev/null
 grep -q "'finished'" "$mysql_capture"
 grep -q "'error'" "$mysql_capture"
+grep -q "'2026-07-08 08:00:00'" "$mysql_capture"
 grep -q 'INSERT INTO jobs_history (job_id, owner, name, state_final, submitted_at, started_at, finished_at)' "$mysql_capture"
 ! grep -q 'slots\|queue' "$mysql_capture"
 

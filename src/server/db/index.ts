@@ -10,6 +10,7 @@ const pool = mysql.createPool({
   database: env.dbName,
   user: env.dbUser,
   password: env.dbPassword,
+  timezone: "Z",
   connectionLimit: 5,
 });
 
