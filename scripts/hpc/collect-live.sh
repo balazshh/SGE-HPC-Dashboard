@@ -57,7 +57,7 @@ function qstat_utc(date_part, time_part, date_bits, time_bits, epoch) {
 }
 BEGIN {
   ENVIRON["TZ"] = hpc_tz;
-  running = queued = failed = hold = 0;
+  running = queued = failed = hold = total_jobs = 0;
 }
 NF && $1 != "job-ID" && $1 !~ /^-+$/ {
   job_id = $1;
@@ -67,6 +67,7 @@ NF && $1 != "job-ID" && $1 !~ /^-+$/ {
   state = state_group(state_raw);
   submitted_at = qstat_utc($6, $7);
   started_at = state == "running" ? submitted_at : "";
+  total_jobs++;
   if (state == "running") running++;
   else if (state == "queued") queued++;
   else if (state == "error") failed++;
@@ -75,7 +76,7 @@ NF && $1 != "job-ID" && $1 !~ /^-+$/ {
   print job_id, owner, name, state, submitted_at, started_at;
 }
 END {
-  printf("running_jobs=%d\nqueued_jobs=%d\nfailed_jobs=%d\nhold_jobs=%d\n", running, queued, failed, hold) > summary_env;
+  printf("running_jobs=%d\nqueued_jobs=%d\nfailed_jobs=%d\nhold_jobs=%d\ntotal_jobs=%d\n", running, queued, failed, hold, total_jobs) > summary_env;
 }
 ' OFS='\t' "$jobs_txt" > "$jobs_tsv"
 
@@ -101,11 +102,10 @@ fi
 
 cat > "$sql_file" <<SQL
 START TRANSACTION;
-DELETE FROM cluster_snapshots;
 INSERT INTO cluster_snapshots
-  (recorded_at, total_slots, used_slots, free_slots, running_jobs, queued_jobs, failed_jobs, hold_jobs, health_status, offline_node_count)
+  (recorded_at, total_slots, used_slots, free_slots, job_count, running_jobs, queued_jobs, failed_jobs, hold_jobs, health_status, offline_node_count)
 VALUES
-  ('${recorded_at}', ${total_slots}, ${used_slots}, ${free_slots}, ${running_jobs}, ${queued_jobs}, ${failed_jobs}, ${hold_jobs}, '${health_status}', ${offline_node_count});
+  ('${recorded_at}', ${total_slots}, ${used_slots}, ${free_slots}, ${total_jobs}, ${running_jobs}, ${queued_jobs}, ${failed_jobs}, ${hold_jobs}, '${health_status}', ${offline_node_count});
 DELETE FROM jobs_current;
 DELETE FROM nodes_current;
 SQL

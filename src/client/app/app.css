@@ -46,6 +46,18 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 a {
   color: inherit;
 }
@@ -351,26 +363,87 @@ legend {
   color: var(--bosch-red);
 }
 
-.two-column {
+.dashboard-chart-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: calc(var(--space-unit) * 3);
 }
 
-.detail-list {
+.time-chart {
   display: grid;
   gap: calc(var(--space-unit) * 3);
+  min-width: 0;
 }
 
-.detail-list dt {
-  font-weight: var(--font-weight-bold);
+.time-chart__header,
+.time-chart__times {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: calc(var(--space-unit) * 2);
 }
 
-.progress {
+.time-chart__plot {
+  position: relative;
+  padding-left: calc(var(--space-unit) * 6);
+}
+
+.time-chart__plot svg {
+  display: block;
   width: 100%;
-  height: 24px;
-  margin: calc(var(--space-unit) * 3) 0;
-  accent-color: var(--bosch-blue);
+  height: 176px;
+  overflow: visible;
+}
+
+.time-chart__maximum,
+.time-chart__minimum {
+  position: absolute;
+  left: 0;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.time-chart__maximum {
+  top: calc(var(--space-unit) * -1);
+}
+
+.time-chart__minimum {
+  bottom: calc(var(--space-unit) * -1);
+}
+
+.time-chart__grid {
+  stroke: var(--color-border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.time-chart__line {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  vector-effect: non-scaling-stroke;
+}
+
+.time-chart__line--blue {
+  stroke: var(--bosch-blue);
+}
+
+.time-chart__line--purple {
+  stroke: var(--bosch-purple);
+}
+
+.time-chart__point--blue {
+  fill: var(--bosch-blue);
+}
+
+.time-chart__point--purple {
+  fill: var(--bosch-purple);
+}
+
+.time-chart__times {
+  margin-left: calc(var(--space-unit) * 6);
+  font-size: 0.875rem;
 }
 
 .btn {
@@ -563,7 +636,7 @@ th {
 
 @media (max-width: 640px) {
   .metric-grid,
-  .two-column,
+  .dashboard-chart-grid,
   .filters {
     grid-template-columns: 1fr;
   }

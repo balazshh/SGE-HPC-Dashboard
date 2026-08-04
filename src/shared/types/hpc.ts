@@ -26,6 +26,12 @@ export interface ClusterSummary {
   myActiveJobsCount: number;
 }
 
+export interface ClusterHistoryPoint {
+  recordedAt: string;
+  utilizationPercent: number;
+  jobCount: number;
+}
+
 export interface NodeRecord {
   hostname: string;
   arch: string | null;

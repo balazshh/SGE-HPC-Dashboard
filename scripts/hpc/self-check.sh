@@ -26,6 +26,7 @@ job-ID prior name user state submit/start at queue slots ja-task-ID
 101 0.555 train-a alice r 07/08/2026 10:00:00 all.q@n001 4
 102 0.500 wait-b alice qw 07/08/2026 11:00:00 8
 103 0.400 hold-c alice hqw 07/08/2026 11:30:00 2
+104 0.300 pause-d alice s 07/08/2026 11:45:00 all.q@n001 1
 EOF
 
 cat > "$workdir/qhost.txt" <<'EOF'
@@ -74,6 +75,9 @@ grep -q "'running'" "$mysql_capture"
 grep -q "'hold'" "$mysql_capture"
 grep -q "'2026-07-08 08:00:00'" "$mysql_capture"
 grep -q "'missing'" "$mysql_capture"
+! grep -q 'DELETE FROM cluster_snapshots' "$mysql_capture"
+grep -q 'free_slots, job_count, running_jobs' "$mysql_capture"
+grep -q '12, 4, 1, 1, 0, 1' "$mysql_capture"
 grep -q 'INSERT INTO jobs_current (job_id, owner, name, state_group, submitted_at, started_at)' "$mysql_capture"
 ! grep -q 'state_raw\|swapto_raw\|swapus_raw' "$mysql_capture"
 

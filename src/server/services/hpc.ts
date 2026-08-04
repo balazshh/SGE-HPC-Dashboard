@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 
 import type {
+  ClusterHistoryPoint,
   ClusterSummary,
   HistoryBucket,
   HistoryPreset,
@@ -117,6 +118,21 @@ export async function getDashboardSummary(owner: string): Promise<ClusterSummary
     offlineNodeCount: latest.offlineNodeCount,
     myActiveJobsCount: myJobs.length,
   };
+}
+
+export async function getClusterHistory(): Promise<ClusterHistoryPoint[]> {
+  const bucket = sql<string>`DATE_FORMAT(DATE_SUB(${clusterSnapshots.recordedAt}, INTERVAL MOD(MINUTE(${clusterSnapshots.recordedAt}), 15) MINUTE), '%Y-%m-%dT%H:%i:00.000Z')`;
+
+  return db
+    .select({
+      recordedAt: bucket,
+      utilizationPercent: sql<number>`ROUND(AVG(CASE WHEN ${clusterSnapshots.totalSlots} > 0 THEN ${clusterSnapshots.usedSlots} * 100 / ${clusterSnapshots.totalSlots} ELSE 0 END))`.mapWith(Number),
+      jobCount: sql<number>`ROUND(AVG(${clusterSnapshots.jobCount}))`.mapWith(Number),
+    })
+    .from(clusterSnapshots)
+    .where(gte(clusterSnapshots.recordedAt, new Date(Date.now() - 24 * 60 * 60 * 1000)))
+    .groupBy(bucket)
+    .orderBy(bucket);
 }
 
 export async function getNodes() {

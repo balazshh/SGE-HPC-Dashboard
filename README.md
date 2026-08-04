@@ -24,7 +24,7 @@ Fill `.env`; `APP_BASE_URL` must be the final HTTPS URL and all Entra values are
 
 ### Database
 
-For a fresh database, create the database/user, then apply both schema files in order:
+For a fresh database, create the database/user, then apply the schema files in order:
 
 ```sql
 CREATE DATABASE hpc_dashboard_test_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -33,6 +33,7 @@ GRANT ALL PRIVILEGES ON hpc_dashboard_test_db.* TO 'hpc_dashboard_test_db_user'@
 USE hpc_dashboard_test_db;
 SOURCE drizzle/0000_initial.sql;
 SOURCE drizzle/0001_ponytail_cleanup.sql;
+SOURCE drizzle/0002_cluster_history.sql;
 ```
 
 Keep these database names aligned with `.env` and `scripts/hpc/collector.env`. `0001_ponytail_cleanup.sql` removes obsolete collector columns and rollup tables. Existing installations must follow the coordinated upgrade below before applying it.
@@ -104,22 +105,25 @@ Install only these cron jobs:
 30 2 * * * cd /opt/hpc-dashboard && ./scripts/hpc/cleanup-old-data.sh >> /var/log/hpc-dashboard-cleanup.log 2>&1
 ```
 
-History charts now group the indexed `jobs_history` table directly; there is no rollup job.
+The dashboard's utilization and active-job charts fill from live snapshots over the next 24 hours after deployment. Cleanup retains two days of snapshots.
+
+History charts group the indexed `jobs_history` table directly; there is no rollup job.
 
 ## Existing-install upgrade
 
 `0001_ponytail_cleanup.sql` is destructive. Back up MySQL first; restoring removed columns requires that backup.
 
-1. Build and deploy the new web image. It works while the old extra columns still exist.
-2. Disable the old live, history, rollup, and cleanup cron entries; wait for running collectors to finish.
-3. Apply the migration:
+1. Disable the old live, history, rollup, and cleanup cron entries; wait for running collectors to finish.
+2. Apply each migration that has not already been applied (`0001` only for installations that still need the cleanup):
 
    ```sql
    USE hpc_dashboard_test_db;
    SOURCE drizzle/0001_ponytail_cleanup.sql;
+   SOURCE drizzle/0002_cluster_history.sql;
    ```
 
-4. Install the new collector scripts and run `self-check.sh`, `collect-live.sh`, `collect-history.sh`, and `cleanup-old-data.sh` once.
+3. Build and deploy the new web image, then install the new collector scripts.
+4. Run `self-check.sh`, `collect-live.sh`, `collect-history.sh`, and `cleanup-old-data.sh` once.
 5. Restore only the three cron entries shown above.
 
 Do not run old collectors after `0001`; they still target the removed columns.
@@ -128,12 +132,13 @@ Do not run old collectors after `0001`; they still target the removed columns.
 
 ```bash
 git pull
+# Apply every new numbered SQL migration now, before restarting the app or collectors.
 docker build --network=host -t hpc-dashboard -f Containerfile .
 docker rm -f hpc-dashboard 2>/dev/null || true
 docker run -d --name hpc-dashboard --env-file .env -p 127.0.0.1:3001:3001 --restart unless-stopped hpc-dashboard
 ```
 
-Apply any new numbered SQL migration exactly once, in filename order.
+Apply each numbered SQL migration exactly once, in filename order.
 
 ## Troubleshooting
 
@@ -145,4 +150,4 @@ nginx -t
 
 - Login failure: check `APP_BASE_URL`, `BETTER_AUTH_SECRET`, and all `ENTRA_*` values.
 - Empty/stale pages: run the collectors manually and check their MySQL access.
-- Collector failure after upgrade: confirm `0001_ponytail_cleanup.sql` and the new collector scripts were deployed together.
+- Collector failure after upgrade: confirm all numbered migrations and the matching collector scripts were deployed together.

@@ -21,6 +21,7 @@ export const clusterSnapshots = mysqlTable(
     totalSlots: int("total_slots").notNull(),
     usedSlots: int("used_slots").notNull(),
     freeSlots: int("free_slots").notNull(),
+    jobCount: int("job_count").notNull(),
     runningJobs: int("running_jobs").notNull(),
     queuedJobs: int("queued_jobs").notNull(),
     failedJobs: int("failed_jobs").notNull(),

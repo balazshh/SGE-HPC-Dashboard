@@ -1,28 +1,32 @@
-import type { ClusterSummary, JobRecord } from "../../shared/types/hpc";
+import type { ClusterHistoryPoint, ClusterSummary, JobRecord } from "../../shared/types/hpc";
 import { FreshnessBanner } from "../components/FreshnessBanner";
 import { MetricCard } from "../components/MetricCard";
 import { StatusPill } from "../components/StatusPill";
-import { formatBudapestDateTime } from "../lib/format";
+import { TimeChart } from "../components/TimeChart";
 import { useApi } from "../lib/api";
+import { formatBudapestDateTime, formatHistoryBucketLabel, formatNumber } from "../lib/format";
 import { useUi } from "../lib/ui";
 
 export function DashboardPage() {
   const summary = useApi<ClusterSummary>("/api/dashboard/summary");
+  const clusterHistory = useApi<ClusterHistoryPoint[]>("/api/dashboard/history");
   const myJobs = useApi<JobRecord[]>("/api/jobs/active");
-  const { t } = useUi();
+  const { language, t } = useUi();
 
-  if (summary.loading || myJobs.loading) {
+  if (summary.loading || clusterHistory.loading || myJobs.loading) {
     return <main className="page"><section className="surface">{t("loadingDashboard")}</section></main>;
   }
 
-  if (summary.error || myJobs.error || !summary.data || !myJobs.data) {
+  if (summary.error || clusterHistory.error || myJobs.error || !summary.data || !clusterHistory.data || !myJobs.data) {
     return <main className="page"><section className="surface">{t("failedDashboard")}</section></main>;
   }
 
   const utilizationPercent = summary.data.totalSlots > 0
     ? Math.round((summary.data.usedSlots / summary.data.totalSlots) * 100)
     : 0;
-  const utilizationBarPercent = Math.max(0, Math.min(utilizationPercent, 100));
+  const formatTime = (value: string) => formatHistoryBucketLabel(value, "24h", language);
+  const chartEnd = Date.now();
+  const chartStart = chartEnd - 24 * 60 * 60 * 1000;
 
   return (
     <main className="page">
@@ -37,44 +41,34 @@ export function DashboardPage() {
         <MetricCard label={t("myActiveJobs")} value={summary.data.myActiveJobsCount} detail={t("previewFromCurrentJobs")} />
       </section>
 
-      <section className="two-column">
-        <article className="surface">
-          <div className="section-title-row">
-            <div>
-              <p className="eyebrow">{t("health")}</p>
-              <h2>{t("clusterHealthSummary")}</h2>
-            </div>
-            <StatusPill value={summary.data.healthStatus} />
-          </div>
-          <dl className="detail-list">
-            <div>
-              <dt>{t("offlineNodes")}</dt>
-              <dd>{summary.data.offlineNodeCount}</dd>
-            </div>
-            <div>
-              <dt>{t("freeSlots")}</dt>
-              <dd>{summary.data.freeSlots}</dd>
-            </div>
-            <div>
-              <dt>{t("healthRule")}</dt>
-              <dd>{t("healthRuleText")}</dd>
-            </div>
-          </dl>
-        </article>
-
-        <article className="surface">
-          <p className="eyebrow">{t("capacity")}</p>
-          <h2>{t("clusterUtilization")}</h2>
-          <progress
-            className="progress"
-            max={100}
-            value={utilizationBarPercent}
-            aria-label={t("clusterUtilization")}
-          >
-            {utilizationPercent}%
-          </progress>
-          <p className="muted">{t("utilizationInUse", { percent: utilizationPercent })}</p>
-        </article>
+      <section className="dashboard-chart-grid" aria-label={t("clusterActivity")}>
+        <TimeChart
+          title={t("hpcUtilizationOverTime")}
+          rangeLabel={t("last24Hours")}
+          ariaLabel={t("utilizationTimeChartLabel")}
+          noDataLabel={t("noClusterHistory")}
+          latestLabel={t("latestValue")}
+          points={clusterHistory.data.map((point) => ({ recordedAt: point.recordedAt, value: point.utilizationPercent }))}
+          tone="blue"
+          domainStart={chartStart}
+          domainEnd={chartEnd}
+          maxValue={100}
+          formatValue={(value) => `${value}%`}
+          formatTime={formatTime}
+        />
+        <TimeChart
+          title={t("jobCountOverTime")}
+          rangeLabel={t("last24Hours")}
+          ariaLabel={t("jobCountTimeChartLabel")}
+          noDataLabel={t("noClusterHistory")}
+          latestLabel={t("latestValue")}
+          points={clusterHistory.data.map((point) => ({ recordedAt: point.recordedAt, value: point.jobCount }))}
+          tone="purple"
+          domainStart={chartStart}
+          domainEnd={chartEnd}
+          formatValue={formatNumber}
+          formatTime={formatTime}
+        />
       </section>
 
       <section className="surface">

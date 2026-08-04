@@ -8,6 +8,7 @@ collector_init
 
 mysql_exec <<'SQL'
 DELETE FROM jobs_history WHERE finished_at < UTC_TIMESTAMP() - INTERVAL 365 DAY;
+DELETE FROM cluster_snapshots WHERE recorded_at < UTC_TIMESTAMP() - INTERVAL 2 DAY;
 SQL
 
 echo "old data cleaned"

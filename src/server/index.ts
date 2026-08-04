@@ -3,6 +3,7 @@ import { env } from "./config/env";
 import { getHpcUsername, handleAuthRequest } from "./auth";
 import {
   getActiveJobs,
+  getClusterHistory,
   getDashboardSummary,
   getHistory,
   getJobHistory,
@@ -63,6 +64,10 @@ Bun.serve({
 
     if (url.pathname === "/api/dashboard/summary") {
       return withUser(request, async (hpcUsername) => json(await getDashboardSummary(hpcUsername)));
+    }
+
+    if (url.pathname === "/api/dashboard/history") {
+      return withUser(request, async () => json(await getClusterHistory()));
     }
 
     if (url.pathname === "/api/nodes") {
