@@ -135,10 +135,9 @@ export function LoginIntro({ onComplete, playing }: { onComplete: () => void; pl
   const backdropRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const logoRef = useRef<SVGSVGElement>(null);
+  const startAnimationRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    if (!playing) return;
-
     const backdrop = backdropRef.current;
     const canvas = canvasRef.current;
     const logo = logoRef.current;
@@ -148,8 +147,10 @@ export function LoginIntro({ onComplete, playing }: { onComplete: () => void; pl
     if (motionPreference.matches) return onComplete();
 
     let stopped = false;
+    let animationStarted = false;
     let animationFrame = 0;
-    let resizeHandler: (() => void) | null = null;
+    let safetyTimeout = 0;
+    let handleResize: (() => void) | null = null;
     let targetLogo: SVGSVGElement | null = null;
     let renderer: WebGLRenderer | null = null;
     let geometry: BufferGeometry | null = null;
@@ -169,8 +170,6 @@ export function LoginIntro({ onComplete, playing }: { onComplete: () => void; pl
       event.preventDefault();
       finish();
     };
-    const safetyTimeout = window.setTimeout(finish, 4000);
-
     motionPreference.addEventListener("change", handleMotionChange);
     canvas.addEventListener("webglcontextlost", handleContextLost);
 
@@ -227,7 +226,23 @@ export function LoginIntro({ onComplete, playing }: { onComplete: () => void; pl
       const targetPosition = new Vector3();
       let startScale = 1;
       let targetScale = 0.1;
-      const resize = () => {
+      let startedAt = 0;
+
+      const renderFrame = (frame: ReturnType<typeof loginIntroFrame>) => {
+        if (stopped || !renderer || !material) return;
+        const scale = MathUtils.lerp(startScale, targetScale, frame.morph);
+
+        backdrop.style.opacity = String(frame.opacity);
+        object.position.copy(targetPosition).multiplyScalar(frame.morph);
+        object.rotation.set(frame.tilt, frame.angle, frame.roll);
+        object.scale.set(scale, scale, scale * Math.max(0.001, 1 - frame.morph));
+        material.metalness = MathUtils.lerp(0.92, 0.05, frame.morph);
+        material.roughness = MathUtils.lerp(0.14, 0.8, frame.morph);
+        material.clearcoat = MathUtils.lerp(1, 0.05, frame.morph);
+        renderer.render(scene, camera);
+      };
+
+      handleResize = () => {
         const width = Math.max(1, canvas.clientWidth);
         const height = Math.max(1, canvas.clientHeight);
         const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -247,37 +262,30 @@ export function LoginIntro({ onComplete, playing }: { onComplete: () => void; pl
           (1 - (target.top + target.height / 2) / height * 2) * visibleHeight / 2,
           0,
         );
+        if (!animationStarted) renderFrame(loginIntroFrame(0));
       };
-      resize();
-      resizeHandler = resize;
-      window.addEventListener("resize", resize);
+      handleResize();
+      window.addEventListener("resize", handleResize);
 
-      const startedAt = performance.now();
       const draw = (now: number) => {
-        if (stopped || !renderer || !material) return;
         const frame = loginIntroFrame(now - startedAt);
-        const scale = MathUtils.lerp(startScale, targetScale, frame.morph);
-
-        backdrop.style.opacity = String(frame.opacity);
-        object.position.copy(targetPosition).multiplyScalar(frame.morph);
-        object.rotation.set(frame.tilt, frame.angle, frame.roll);
-        object.scale.set(scale, scale, scale * Math.max(0.001, 1 - frame.morph));
-        material.metalness = MathUtils.lerp(0.92, 0.05, frame.morph);
-        material.roughness = MathUtils.lerp(0.14, 0.8, frame.morph);
-        material.clearcoat = MathUtils.lerp(1, 0.05, frame.morph);
-        renderer.render(scene, camera);
+        renderFrame(frame);
 
         if (frame.done) {
-          window.removeEventListener("resize", resize);
-          resizeHandler = null;
           finish();
         } else {
           animationFrame = requestAnimationFrame(draw);
         }
       };
 
-      draw(startedAt);
-      logo.style.opacity = "0";
+      startAnimationRef.current = () => {
+        if (stopped || animationStarted) return;
+        animationStarted = true;
+        startedAt = performance.now();
+        safetyTimeout = window.setTimeout(finish, 4000);
+        draw(startedAt);
+      };
+      renderFrame(loginIntroFrame(0));
     } catch (error) {
       console.warn("WebGL login intro skipped", error);
       finish();
@@ -285,18 +293,23 @@ export function LoginIntro({ onComplete, playing }: { onComplete: () => void; pl
 
     return () => {
       stopped = true;
+      startAnimationRef.current = null;
       cancelAnimationFrame(animationFrame);
       clearTimeout(safetyTimeout);
       motionPreference.removeEventListener("change", handleMotionChange);
       canvas.removeEventListener("webglcontextlost", handleContextLost);
-      if (resizeHandler) window.removeEventListener("resize", resizeHandler);
+      if (handleResize) window.removeEventListener("resize", handleResize);
       if (targetLogo) targetLogo.style.visibility = "";
       environment?.dispose();
       geometry?.dispose();
       material?.dispose();
       renderer?.dispose();
     };
-  }, [onComplete, playing]);
+  }, [onComplete]);
+
+  useEffect(() => {
+    if (playing) startAnimationRef.current?.();
+  }, [playing]);
 
   return (
     <div className="login-intro" data-playing={playing} aria-hidden="true">

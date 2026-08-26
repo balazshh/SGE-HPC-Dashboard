@@ -975,14 +975,11 @@ tbody tr:hover {
   width: min(72vw, 900px);
   max-width: calc(100vw - 32px);
   height: auto;
+  opacity: 0;
 }
 
 :root[data-theme="dark"] .login-intro__backdrop {
   background: #000000;
-}
-
-:root[data-theme="dark"] .login-intro__source > g > g:last-child {
-  fill: #ffffff;
 }
 
 .login-intro__canvas {
