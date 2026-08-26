@@ -37,8 +37,11 @@ test("post-auth HTML masks the app until WebGL renders frame zero", () => {
 
   expect(html).toContain('sessionStorage.getItem("play-login-intro")');
   expect(html).toContain('id="login-intro-boot"');
+  expect(html.match(/data:image\/webp;base64/g)).toHaveLength(2);
   expect(html).not.toContain("<svg");
+  expect(html.indexOf('<div id="login-intro-boot"')).toBeLessThan(html.indexOf('<div id="root"'));
   expect(html.indexOf('<div id="login-intro-boot"')).toBeLessThan(html.indexOf('src="/src/client/main.tsx"'));
+  expect(intro).toContain('classList.remove("login-intro-pending")');
   expect(intro).toContain("startAnimationRef");
   expect(intro).toContain("renderFrame(loginIntroFrame(0))");
   expect(intro).not.toContain("if (!playing) return;");

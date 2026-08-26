@@ -91,6 +91,10 @@ export function clearLoginIntroRequest() {
   }
 }
 
+function clearLoginIntroBoot() {
+  document.documentElement.classList.remove("login-intro-pending");
+}
+
 function buildLogoGeometry(logo: SVGSVGElement) {
   const clone = logo.cloneNode(true) as SVGSVGElement;
   clone.removeAttribute("class");
@@ -141,10 +145,16 @@ export function LoginIntro({ onComplete, playing }: { onComplete: () => void; pl
     const backdrop = backdropRef.current;
     const canvas = canvasRef.current;
     const logo = logoRef.current;
-    if (!backdrop || !canvas || !logo) return onComplete();
+    if (!backdrop || !canvas || !logo) {
+      clearLoginIntroBoot();
+      return onComplete();
+    }
 
     const motionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (motionPreference.matches) return onComplete();
+    if (motionPreference.matches) {
+      clearLoginIntroBoot();
+      return onComplete();
+    }
 
     let stopped = false;
     let animationStarted = false;
@@ -160,6 +170,7 @@ export function LoginIntro({ onComplete, playing }: { onComplete: () => void; pl
     const finish = () => {
       if (stopped) return;
       stopped = true;
+      clearLoginIntroBoot();
       cancelAnimationFrame(animationFrame);
       onComplete();
     };
@@ -286,6 +297,7 @@ export function LoginIntro({ onComplete, playing }: { onComplete: () => void; pl
         draw(startedAt);
       };
       renderFrame(loginIntroFrame(0));
+      clearLoginIntroBoot();
     } catch (error) {
       console.warn("WebGL login intro skipped", error);
       finish();
@@ -293,6 +305,7 @@ export function LoginIntro({ onComplete, playing }: { onComplete: () => void; pl
 
     return () => {
       stopped = true;
+      clearLoginIntroBoot();
       startAnimationRef.current = null;
       cancelAnimationFrame(animationFrame);
       clearTimeout(safetyTimeout);
