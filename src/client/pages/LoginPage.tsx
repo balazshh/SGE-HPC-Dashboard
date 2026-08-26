@@ -2,6 +2,7 @@ import { useEffect } from "react";
 
 import { requestLoginIntro } from "../components/LoginIntro";
 import { authClient } from "../lib/auth-client";
+import { navigate } from "../lib/navigation";
 import { useUi } from "../lib/ui";
 
 export function LoginPage() {
@@ -10,7 +11,7 @@ export function LoginPage() {
 
   useEffect(() => {
     if (session.data?.user) {
-      window.location.replace("/");
+      navigate("/", { replace: true });
     }
   }, [session.data?.user]);
 

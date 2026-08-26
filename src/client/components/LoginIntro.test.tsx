@@ -33,7 +33,7 @@ test("login intro uses smooth beveled vector extrusion", () => {
 });
 
 test("login intro canvas is decorative", () => {
-  const html = renderToStaticMarkup(<LoginIntro onComplete={() => {}} />);
+  const html = renderToStaticMarkup(<LoginIntro playing onComplete={() => {}} />);
 
   expect(html).toContain("login-intro__backdrop");
   expect(html).toContain("login-intro__canvas");

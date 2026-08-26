@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 
 import { authClient } from "../lib/auth-client";
+import { navigate } from "../lib/navigation";
 import { clearLoginIntroRequest, LoginIntro, loginIntroRequested } from "./LoginIntro";
 
 export function AuthGate({ children }: { children: ReactNode }) {
@@ -12,7 +13,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!session.isPending && !session.data?.user) {
-      window.location.replace("/login");
+      navigate("/login", { replace: true });
     }
     if (session.data?.user) clearLoginIntroRequest();
   }, [session.data?.user, session.isPending]);
@@ -23,7 +24,9 @@ export function AuthGate({ children }: { children: ReactNode }) {
     return () => chrome.forEach((element) => { element.inert = false; });
   }, [showIntro]);
 
-  if (showIntro) return <LoginIntro onComplete={finishIntro} />;
+  if (showIntro) {
+    return <LoginIntro playing={!session.isPending && Boolean(session.data?.user)} onComplete={finishIntro} />;
+  }
   if (session.isPending || !session.data?.user) return null;
 
   return children;

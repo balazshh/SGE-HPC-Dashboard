@@ -1,8 +1,10 @@
 import type { ComponentType, ReactNode } from "react";
+import { useEffect, useState } from "react";
 
 import { AuthGate } from "../components/AuthGate";
 import { BoschLogo } from "../components/BoschLogo";
 import { UserMenu } from "../components/UserMenu";
+import { CLIENT_NAVIGATION_EVENT, navigate } from "../lib/navigation";
 import { useUi } from "../lib/ui";
 import { DashboardPage } from "../pages/DashboardPage";
 import { HistoryPage } from "../pages/HistoryPage";
@@ -18,6 +20,52 @@ const routes: Record<string, ComponentType> = {
   "/jobs": JobsPage,
   "/history": HistoryPage,
 };
+
+function currentPathname() {
+  return window.location.pathname.replace(/\/+$/, "") || "/";
+}
+
+export function clientRoute(href: string, currentHref: string) {
+  const current = new URL(currentHref);
+  const next = new URL(href, current);
+  if (next.origin !== current.origin) return null;
+  if (next.pathname === current.pathname && next.search === current.search && next.hash) return null;
+  return next;
+}
+
+function usePathname() {
+  const [pathname, setPathname] = useState(currentPathname);
+
+  useEffect(() => {
+    const update = () => setPathname(currentPathname());
+    const handleClick = (event: MouseEvent) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (!(event.target instanceof Element)) return;
+
+      const link = event.target.closest<HTMLAnchorElement>("a[href]");
+      if (!link || link.hasAttribute("download") || (link.target && link.target !== "_self")) return;
+
+      const next = clientRoute(link.href, window.location.href);
+      if (!next) return;
+
+      event.preventDefault();
+      if (next.href === window.location.href) return;
+
+      navigate(next.href);
+    };
+
+    window.addEventListener("popstate", update);
+    window.addEventListener(CLIENT_NAVIGATION_EVENT, update);
+    document.addEventListener("click", handleClick);
+    return () => {
+      window.removeEventListener("popstate", update);
+      window.removeEventListener(CLIENT_NAVIGATION_EVENT, update);
+      document.removeEventListener("click", handleClick);
+    };
+  }, []);
+
+  return pathname;
+}
 
 function AppShell({ children, pathname }: { children: ReactNode; pathname: string }) {
   const { t } = useUi();
@@ -72,7 +120,7 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
 }
 
 export function AppRouter() {
-  const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
+  const pathname = usePathname();
   const Page = routes[pathname] ?? NotFoundPage;
   const content = pathname in routes && pathname !== "/login"
     ? <AuthGate><Page /></AuthGate>

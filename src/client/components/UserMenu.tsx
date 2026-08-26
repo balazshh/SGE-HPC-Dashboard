@@ -1,4 +1,5 @@
 import { authClient } from "../lib/auth-client";
+import { navigate } from "../lib/navigation";
 import { languageOptions, useUi } from "../lib/ui";
 
 export function UserMenu() {
@@ -8,7 +9,7 @@ export function UserMenu() {
 
   async function signOut() {
     await authClient.signOut();
-    window.location.assign("/login");
+    navigate("/login", { replace: true });
   }
 
   return (

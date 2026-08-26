@@ -128,12 +128,14 @@ function buildLogoGeometry(logo: SVGSVGElement) {
   return { geometry: merged, width: LOGO_VIEWBOX_WIDTH };
 }
 
-export function LoginIntro({ onComplete }: { onComplete: () => void }) {
+export function LoginIntro({ onComplete, playing }: { onComplete: () => void; playing: boolean }) {
   const backdropRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const logoRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
+    if (!playing) return;
+
     const backdrop = backdropRef.current;
     const canvas = canvasRef.current;
     const logo = logoRef.current;
@@ -291,10 +293,10 @@ export function LoginIntro({ onComplete }: { onComplete: () => void }) {
       material?.dispose();
       renderer?.dispose();
     };
-  }, [onComplete]);
+  }, [onComplete, playing]);
 
   return (
-    <div className="login-intro" aria-hidden="true">
+    <div className="login-intro" data-playing={playing} aria-hidden="true">
       <div ref={backdropRef} className="login-intro__backdrop" />
       <BoschLogoMark ref={logoRef} className="login-intro__source" />
       <canvas ref={canvasRef} className="login-intro__canvas" aria-hidden="true" />
