@@ -6,7 +6,7 @@ export function NotFoundPage() {
   return (
     <main className="page page--centered">
       <section className="surface auth-card">
-        <p className="eyebrow">404</p>
+        <p className="error-code">404</p>
         <h1>{t("pageNotFound")}</h1>
         <p className="lede">{t("pageNotFoundLede")}</p>
         <a className="btn btn-primary" href="/">{t("backToDashboard")}</a>

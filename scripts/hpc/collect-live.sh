@@ -25,7 +25,7 @@ run_command_or_cat "$QSTAT_CLUSTER_COMMAND" "${QSTAT_CLUSTER_FILE:-}" > "$cluste
 run_command_or_cat "$QSTAT_JOBS_COMMAND" "${QSTAT_JOBS_FILE:-}" > "$jobs_txt"
 run_command_or_cat "${QHOST_COMMAND:-qhost}" "${QHOST_FILE:-}" > "$qhost_txt"
 
-read -r total_slots used_slots free_slots offline_node_count < <(
+read -r total_slots used_slots free_slots < <(
   awk '
   NF && $1 != "CLUSTER" && $1 !~ /^-+$/ {
     total += $6 + 0;
@@ -33,13 +33,12 @@ read -r total_slots used_slots free_slots offline_node_count < <(
     free += $5 + 0;
   }
   END {
-    # ponytail: qstat -g c gives slot totals, not offline-node counts; keep 0 until we parse qhost/qstat -f for node health.
-    print total + 0, used + 0, free + 0, 0;
+    print total + 0, used + 0, free + 0;
   }
   ' "$cluster_txt"
 )
 
-awk -v summary_env="$summary_env" -v hpc_tz="$HPC_TZ" '
+awk -v summary_env="$summary_env" -v hpc_tz="$HPC_TZ" -v recorded_at="$recorded_at" '
 function state_group(raw) {
   if (raw == "r" || raw == "t" || raw == "Rr" || raw == "Rt") return "running";
   if (raw == "qw") return "queued";
@@ -49,11 +48,14 @@ function state_group(raw) {
   if (raw == "dr" || raw == "dt" || raw == "dRr" || raw == "dRt" || raw == "ds" || raw == "dS" || raw == "dT" || raw == "dRs" || raw == "dRS" || raw == "dRT") return "deleted";
   return "queued";
 }
-function qstat_utc(date_part, time_part, date_bits, time_bits, epoch) {
+function qstat_utc(date_part, time_part, date_bits, time_bits, year, epoch) {
+  if (date_part !~ /^[0-9]+\/[0-9]+\/[0-9]+$/ || time_part !~ /^[0-9]+:[0-9]+:[0-9]+$/) return "";
   split(date_part, date_bits, "/");
   split(time_part, time_bits, ":");
-  epoch = mktime(sprintf("%d %d %d %d %d %d", date_bits[3], date_bits[1], date_bits[2], time_bits[1], time_bits[2], time_bits[3]));
-  return strftime("%Y-%m-%d %H:%M:%S", epoch, 1);
+  year = date_bits[3] + 0;
+  if (year < 100) year += year < 70 ? 2000 : 1900;
+  epoch = mktime(sprintf("%d %d %d %d %d %d", year, date_bits[1], date_bits[2], time_bits[1], time_bits[2], time_bits[3]));
+  return epoch < 0 ? "" : strftime("%Y-%m-%d %H:%M:%S", epoch, 1);
 }
 BEGIN {
   ENVIRON["TZ"] = hpc_tz;
@@ -65,7 +67,8 @@ NF && $1 != "job-ID" && $1 !~ /^-+$/ {
   owner = $4;
   state_raw = $5;
   state = state_group(state_raw);
-  submitted_at = qstat_utc($6, $7);
+  scheduler_at = qstat_utc($6, $7);
+  submitted_at = scheduler_at == "" ? recorded_at : scheduler_at;
   started_at = state == "running" ? submitted_at : "";
   total_jobs++;
   if (state == "running") running++;
@@ -92,6 +95,8 @@ NF && $1 != "HOSTNAME" && $1 != "global" && $1 !~ /^-+$/ {
   print $1, empty_if_dash($2), int_or_empty($3), int_or_empty($4), int_or_empty($5), int_or_empty($6), empty_if_dash($7), empty_if_dash($8), empty_if_dash($9), status, recorded_at;
 }
 ' OFS='\t' "$qhost_txt" > "$nodes_tsv"
+
+offline_node_count="$(awk -F '\t' '$10 == "missing" { count++ } END { print count + 0 }' "$nodes_tsv")"
 
 # shellcheck disable=SC1090
 source "$summary_env"

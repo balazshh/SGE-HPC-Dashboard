@@ -28,7 +28,7 @@ export function JobsPage() {
   const activeJobs = useApi<JobRecord[]>("/api/jobs/active");
   const history = useApi<PaginatedJobs>(historyPath);
 
-  if (activeJobs.loading || history.loading) {
+  if (activeJobs.loading || (history.loading && !history.data)) {
     return <main className="page"><section className="surface">{t("loadingJobs")}</section></main>;
   }
 
@@ -40,24 +40,31 @@ export function JobsPage() {
 
   return (
     <main className="page">
+      <section className="page-header">
+        <div>
+          <h1>{t("activeJobsAndHistory")}</h1>
+          <p className="lede">{t("jobsPageLede")}</p>
+        </div>
+      </section>
+
       <section className="surface">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">{t("activeJobs")}</p>
-            <h2>{t("currentSchedulerView")}</h2>
+            <h2>{t("activeJobs")}</h2>
+            <p className="muted">{t("activeJobsCount", { count: activeJobs.data.length })}</p>
           </div>
-          <span className="muted">{t("activeJobsCount", { count: activeJobs.data.length })}</span>
         </div>
         {activeJobs.data.length ? (
           <div className="table-wrap">
             <table>
+              <caption className="sr-only">{t("currentSchedulerView")}</caption>
               <thead>
                 <tr>
-                  <th>{t("jobId")}</th>
-                  <th>{t("name")}</th>
-                  <th>{t("state")}</th>
-                  <th>{t("submittedAt")}</th>
-                  <th>{t("startedAt")}</th>
+                  <th scope="col">{t("jobId")}</th>
+                  <th scope="col">{t("name")}</th>
+                  <th scope="col">{t("state")}</th>
+                  <th scope="col">{t("submittedAt")}</th>
+                  <th scope="col">{t("startedAt")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -78,10 +85,9 @@ export function JobsPage() {
         )}
       </section>
 
-      <section className="surface">
+      <section className="surface" aria-busy={history.loading}>
         <div className="section-title-row section-title-row--stack">
           <div>
-            <p className="eyebrow">{t("pastJobs")}</p>
             <h2>{t("personalJobHistory")}</h2>
           </div>
           <form className="filters" onSubmit={(event) => event.preventDefault()}>
@@ -89,6 +95,7 @@ export function JobsPage() {
               <span>{t("search")}</span>
               <input
                 className="form-input"
+                type="search"
                 value={query}
                 onChange={(event) => {
                   setQuery(event.target.value);
@@ -124,6 +131,7 @@ export function JobsPage() {
                       setPreset(option);
                       setPage(1);
                     }}
+                    aria-pressed={option === preset}
                   >
                     {option}
                   </button>
@@ -136,14 +144,15 @@ export function JobsPage() {
         {historyData.items.length ? (
           <div className="table-wrap">
             <table>
+              <caption className="sr-only">{t("personalJobHistory")}</caption>
               <thead>
                 <tr>
-                  <th>{t("jobId")}</th>
-                  <th>{t("name")}</th>
-                  <th>{t("state")}</th>
-                  <th>{t("submittedAt")}</th>
-                  <th>{t("startedAt")}</th>
-                  <th>{t("finishedAt")}</th>
+                  <th scope="col">{t("jobId")}</th>
+                  <th scope="col">{t("name")}</th>
+                  <th scope="col">{t("state")}</th>
+                  <th scope="col">{t("submittedAt")}</th>
+                  <th scope="col">{t("startedAt")}</th>
+                  <th scope="col">{t("finishedAt")}</th>
                 </tr>
               </thead>
               <tbody>

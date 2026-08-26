@@ -10,10 +10,18 @@ export function FreshnessBanner({ updatedAt }: FreshnessBannerProps) {
   const level = getFreshnessLevel(updatedAt);
   const { freshnessLabel, t } = useUi();
 
+  const label = freshnessLabel(level);
+  const time = formatBudapestDateTime(updatedAt);
+
   return (
-    <section className={`banner banner--${level}`} aria-live="polite">
-      <div>{t("freshnessBanner", { label: freshnessLabel(level), time: formatBudapestDateTime(updatedAt) })}</div>
-      <span className="banner__pill">{t("freshnessThresholds")}</span>
+    <section
+      className={`freshness freshness--${level}`}
+      aria-live="polite"
+      aria-label={t("freshnessBanner", { label, time })}
+    >
+      <span className="freshness__signal" aria-hidden="true" />
+      <strong>{label}</strong>
+      <span className="muted">{t("lastUpdated")}: {time}</span>
     </section>
   );
 }

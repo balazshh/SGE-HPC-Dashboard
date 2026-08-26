@@ -6,5 +6,10 @@ interface StatusPillProps {
 
 export function StatusPill({ value }: StatusPillProps) {
   const { statusLabel } = useUi();
-  return <span className={`status-pill status-pill--${value}`}>{statusLabel(value)}</span>;
+  return (
+    <span className={`status-pill status-pill--${value}`}>
+      <span className="status-pill__dot" aria-hidden="true" />
+      {statusLabel(value)}
+    </span>
+  );
 }

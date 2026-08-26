@@ -28,35 +28,45 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
     ["/history", t("navHistory")],
   ];
 
+  const showNavigation = pathname !== "/login";
+
   return (
     <>
+      <a className="skip-link" href="#main-content">{t("skipToContent")}</a>
       <header className="site-header">
         <div className="site-header__supergraphic" aria-hidden="true" />
         <div className="site-header__bar">
           <div className="site-header__inner">
             <div className="site-header__left">
               <BoschLogo />
-              <nav className="site-nav" aria-label={t("navPrimary")}>
-                {navItems.map(([href, label]) => {
-                  const active = pathname === href;
-                  return (
-                    <a
-                      key={href}
-                      href={href}
-                      className={`site-nav__link${active ? " is-active" : ""}`}
-                      aria-current={active ? "page" : undefined}
-                    >
-                      {label}
-                    </a>
-                  );
-                })}
-              </nav>
+              <span className="site-header__product">SGE HPC</span>
             </div>
             <UserMenu />
           </div>
         </div>
       </header>
-      {children}
+      <div className={`app-frame${showNavigation ? "" : " app-frame--single"}`}>
+        {showNavigation && (
+          <aside className="site-sidebar">
+            <nav className="site-nav" aria-label={t("navPrimary")}>
+              {navItems.map(([href, label]) => {
+                const active = pathname === href;
+                return (
+                  <a
+                    key={href}
+                    href={href}
+                    className={`site-nav__link${active ? " is-active" : ""}`}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {label}
+                  </a>
+                );
+              })}
+            </nav>
+          </aside>
+        )}
+        <div id="main-content" tabIndex={-1}>{children}</div>
+      </div>
     </>
   );
 }

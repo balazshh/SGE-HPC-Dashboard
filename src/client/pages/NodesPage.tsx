@@ -2,7 +2,7 @@ import type { NodeRecord } from "../../shared/types/hpc";
 import { MetricCard } from "../components/MetricCard";
 import { StatusPill } from "../components/StatusPill";
 import { useApi } from "../lib/api";
-import { formatMemoryGigabytes } from "../lib/format";
+import { formatBudapestDateTime, formatMemoryGigabytes } from "../lib/format";
 import { useUi } from "../lib/ui";
 
 function readNumber(value?: string | null) {
@@ -23,6 +23,7 @@ export function NodesPage() {
   }
 
   const items = nodes.data;
+  const updatedAt = items[0]?.lastSeenAt;
   const counts = items.reduce((summary, node) => {
     summary[node.status] += 1;
     if (node.status === "ok") {
@@ -35,6 +36,19 @@ export function NodesPage() {
 
   return (
     <main className="page">
+      <section className="page-header">
+        <div>
+          <h1>{t("liveNodeInventory")}</h1>
+          <p className="lede">{t("nodesPageLede")}</p>
+        </div>
+        {updatedAt ? (
+          <div className="page-header__meta">
+            <span className="muted">{t("lastUpdated")}</span>
+            <strong>{formatBudapestDateTime(updatedAt)}</strong>
+          </div>
+        ) : null}
+      </section>
+
       <section className="metric-grid" aria-label={t("nodes")}>
         <MetricCard label={t("totalNodes")} value={items.length} detail={t("nodesFromQhost")} />
         <MetricCard label={t("okNodes")} value={counts.ok} detail={t("completeQhostRows")} />
@@ -47,26 +61,26 @@ export function NodesPage() {
       <section className="surface">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">{t("nodes")}</p>
             <h2>{t("currentQhostView")}</h2>
           </div>
         </div>
         {items.length ? (
           <div className="table-wrap">
-            <table>
+            <table className="node-table">
+              <caption className="sr-only">{t("currentQhostView")}</caption>
               <thead>
                 <tr>
-                  <th>{t("hostname")}</th>
-                  <th>{t("nodeStatus")}</th>
-                  <th>{t("nodeArch")}</th>
-                  <th>{t("ncpu")}</th>
-                  <th>{t("nsoc")}</th>
-                  <th>{t("ncor")}</th>
-                  <th>{t("nthr")}</th>
-                  <th>{t("load")}</th>
-                  <th>{t("loadPerCpu")}</th>
-                  <th>{t("memoryTotal")}</th>
-                  <th>{t("memoryUsed")}</th>
+                  <th scope="col">{t("hostname")}</th>
+                  <th scope="col">{t("nodeStatus")}</th>
+                  <th scope="col">{t("nodeArch")}</th>
+                  <th scope="col">{t("ncpu")}</th>
+                  <th scope="col">{t("nsoc")}</th>
+                  <th scope="col">{t("ncor")}</th>
+                  <th scope="col">{t("nthr")}</th>
+                  <th scope="col">{t("load")}</th>
+                  <th scope="col">{t("loadPerCpu")}</th>
+                  <th scope="col">{t("memoryTotal")}</th>
+                  <th scope="col">{t("memoryUsed")}</th>
                 </tr>
               </thead>
               <tbody>

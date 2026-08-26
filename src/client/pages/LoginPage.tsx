@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 
+import { requestLoginIntro } from "../components/LoginIntro";
 import { authClient } from "../lib/auth-client";
 import { useUi } from "../lib/ui";
 
@@ -20,13 +21,13 @@ export function LoginPage() {
   return (
     <main className="page page--centered">
       <section className="surface auth-card">
-        <p className="eyebrow">SGE HPC Dashboard</p>
         <h1>{t("signInTitle")}</h1>
         <p className="lede">{t("signInDescription")}</p>
 
         <button
           className="btn btn-primary"
           onClick={() => {
+            requestLoginIntro();
             authClient.signIn.social({
               provider: "microsoft-entra-id" as "github",
               callbackURL: "/",

@@ -8,7 +8,6 @@ export function useApi<T>(path: string) {
   useEffect(() => {
     const controller = new AbortController();
 
-    setData(null);
     setError(null);
     setLoading(true);
 

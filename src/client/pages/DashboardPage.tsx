@@ -22,7 +22,7 @@ export function DashboardPage() {
   }
 
   const utilizationPercent = summary.data.totalSlots > 0
-    ? Math.round((summary.data.usedSlots / summary.data.totalSlots) * 100)
+    ? Math.max(0, Math.min(100, Math.round((summary.data.usedSlots / summary.data.totalSlots) * 100)))
     : 0;
   const formatTime = (value: string) => formatHistoryBucketLabel(value, "24h", language);
   const chartEnd = Date.now();
@@ -30,15 +30,35 @@ export function DashboardPage() {
 
   return (
     <main className="page">
+      <section className="page-header">
+        <div>
+          <h1>{t("clusterActivity")}</h1>
+          <p className="lede">{t("dashboardLede")}</p>
+        </div>
+      </section>
+
       <FreshnessBanner updatedAt={summary.data.updatedAt} />
 
-      <section className="metric-grid" aria-label={t("dashboard")}>
-        <MetricCard label={t("clusterUtilization")} value={`${utilizationPercent}%`} detail={t("usedOfTotalSlots", { used: summary.data.usedSlots, total: summary.data.totalSlots })} />
-        <MetricCard label={t("runningJobs")} value={summary.data.runningJobs} detail={t("liveSchedulerCount")} />
-        <MetricCard label={t("queuedJobs")} value={summary.data.queuedJobs} detail={t("waitingInSchedulerQueue")} />
-        <MetricCard label={t("failedJobs")} value={summary.data.failedJobs} detail={t("schedulerErrorInterpretation")} />
-        <MetricCard label={t("jobsOnHold")} value={summary.data.holdJobs} detail={t("holdStatesOnly")} />
-        <MetricCard label={t("myActiveJobs")} value={summary.data.myActiveJobsCount} detail={t("previewFromCurrentJobs")} />
+      <section className="metric-grid metric-grid--dashboard" aria-label={t("dashboard")}>
+        <article className="surface metric-card metric-card--featured">
+          <div>
+            <p className="metric-card__label">{t("clusterUtilization")}</p>
+            <p className="metric-card__value">{utilizationPercent}%</p>
+            <p className="muted">{t("usedOfTotalSlots", { used: summary.data.usedSlots, total: summary.data.totalSlots })}</p>
+          </div>
+          <progress
+            className="utilization-progress"
+            max="100"
+            value={utilizationPercent}
+            aria-label={`${t("clusterUtilization")}: ${utilizationPercent}%`}
+          >
+            {utilizationPercent}%
+          </progress>
+        </article>
+        <MetricCard label={t("runningJobs")} value={summary.data.runningJobs} />
+        <MetricCard label={t("queuedJobs")} value={summary.data.queuedJobs} />
+        <MetricCard label={t("failedJobs")} value={summary.data.failedJobs} />
+        <MetricCard label={t("jobsOnHold")} value={summary.data.holdJobs} />
       </section>
 
       <section className="dashboard-chart-grid" aria-label={t("clusterActivity")}>
@@ -48,6 +68,7 @@ export function DashboardPage() {
           ariaLabel={t("utilizationTimeChartLabel")}
           noDataLabel={t("noClusterHistory")}
           latestLabel={t("latestValue")}
+          interactionLabel={t("chartInteractionHint")}
           points={clusterHistory.data.map((point) => ({ recordedAt: point.recordedAt, value: point.utilizationPercent }))}
           tone="blue"
           domainStart={chartStart}
@@ -62,6 +83,7 @@ export function DashboardPage() {
           ariaLabel={t("jobCountTimeChartLabel")}
           noDataLabel={t("noClusterHistory")}
           latestLabel={t("latestValue")}
+          interactionLabel={t("chartInteractionHint")}
           points={clusterHistory.data.map((point) => ({ recordedAt: point.recordedAt, value: point.jobCount }))}
           tone="purple"
           domainStart={chartStart}
@@ -74,21 +96,22 @@ export function DashboardPage() {
       <section className="surface">
         <div className="section-title-row">
           <div>
-            <p className="eyebrow">{t("myJobs")}</p>
-            <h2>{t("activeJobsPreview")}</h2>
+            <h2>{t("myJobs")}</h2>
+            <p className="muted">{t("activeJobsCount", { count: myJobs.data.length })}</p>
           </div>
           <a className="btn btn-secondary" href="/jobs">{t("openMyJobs")}</a>
         </div>
         {myJobs.data.length ? (
           <div className="table-wrap">
             <table>
+              <caption className="sr-only">{t("myJobs")}</caption>
               <thead>
                 <tr>
-                  <th>{t("jobId")}</th>
-                  <th>{t("name")}</th>
-                  <th>{t("state")}</th>
-                  <th>{t("submittedAt")}</th>
-                  <th>{t("startedAt")}</th>
+                  <th scope="col">{t("jobId")}</th>
+                  <th scope="col">{t("name")}</th>
+                  <th scope="col">{t("state")}</th>
+                  <th scope="col">{t("submittedAt")}</th>
+                  <th scope="col">{t("startedAt")}</th>
                 </tr>
               </thead>
               <tbody>
