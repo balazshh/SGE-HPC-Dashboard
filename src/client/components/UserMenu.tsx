@@ -1,4 +1,4 @@
-import { authClient, clearAuthPreload } from "../lib/auth-client";
+import { authClient } from "../lib/auth-client";
 import { navigate } from "../lib/navigation";
 import { languageOptions, useUi } from "../lib/ui";
 
@@ -9,7 +9,6 @@ export function UserMenu() {
 
   async function signOut() {
     await authClient.signOut();
-    clearAuthPreload();
     navigate("/login", { replace: true });
   }
 
