@@ -22,9 +22,13 @@ test("post-auth HTML paints the intro first frame before the app loads", () => {
 test("dark mode applies before paint and chart scrollbars stay hidden", () => {
   const html = readFileSync(new URL("../../../index.html", import.meta.url), "utf8");
   const css = readFileSync(new URL("./app.css", import.meta.url), "utf8");
+  const intro = readFileSync(new URL("../components/LoginIntro.tsx", import.meta.url), "utf8");
 
   expect(html).toContain('localStorage.getItem("theme")');
-  expect(css).toContain(':root[data-theme="dark"]');
+  expect(html).toContain(':root[data-theme="dark"] #login-intro-boot');
+  expect(css).toContain(':root[data-theme="dark"] .site-header');
+  expect(css).toContain(':root[data-theme="dark"] .login-intro__backdrop');
+  expect(intro).toContain('dataset.theme === "dark"');
   expect(css).toContain("scrollbar-width: none");
   expect(css).toContain(".history-bar-chart__viewport::-webkit-scrollbar");
   expect(css).not.toContain("scrollbar-width: thin");

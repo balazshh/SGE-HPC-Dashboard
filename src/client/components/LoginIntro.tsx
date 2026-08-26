@@ -94,6 +94,9 @@ export function clearLoginIntroRequest() {
 function buildLogoGeometry(logo: SVGSVGElement) {
   const clone = logo.cloneNode(true) as SVGSVGElement;
   clone.removeAttribute("class");
+  if (document.documentElement.dataset.theme === "dark") {
+    clone.querySelector('g[fill="#000000"]')?.setAttribute("fill", "#ffffff");
+  }
 
   const geometries: BufferGeometry[] = [];
   for (const path of new SVGLoader().parse(new XMLSerializer().serializeToString(clone)).paths) {

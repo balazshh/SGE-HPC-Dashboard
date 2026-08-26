@@ -252,6 +252,46 @@ h3 {
   color: rgb(0 0 0 / 68%);
 }
 
+:root[data-theme="dark"] .site-header,
+:root[data-theme="dark"] .site-header__bar {
+  color: #ffffff;
+  color-scheme: dark;
+  background: #000000;
+}
+
+:root[data-theme="dark"] .site-header {
+  border-bottom-color: rgb(255 255 255 / 28%);
+}
+
+:root[data-theme="dark"] .header-brand-logo {
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .header-brand-logo svg > g > g:last-child {
+  fill: #ffffff;
+}
+
+:root[data-theme="dark"] .site-header__product {
+  border-left-color: rgb(255 255 255 / 28%);
+}
+
+:root[data-theme="dark"] .site-header .control-select,
+:root[data-theme="dark"] .site-header .theme-toggle {
+  color: #ffffff;
+  background: #000000;
+  border-color: rgb(255 255 255 / 48%);
+}
+
+:root[data-theme="dark"] .site-header .theme-toggle:hover,
+:root[data-theme="dark"] .site-header .btn-quiet:hover {
+  color: #ffffff;
+  background: rgb(255 255 255 / 8%);
+}
+
+:root[data-theme="dark"] .site-header .btn-quiet {
+  color: rgb(255 255 255 / 72%);
+}
+
 .app-frame {
   width: min(100%, var(--layout-width));
   min-height: calc(100vh - 79px);
@@ -951,6 +991,14 @@ tbody tr:hover {
   width: min(72vw, 900px);
   max-width: calc(100vw - 32px);
   height: auto;
+}
+
+:root[data-theme="dark"] .login-intro__backdrop {
+  background: #000000;
+}
+
+:root[data-theme="dark"] .login-intro__source > g > g:last-child {
+  fill: #ffffff;
 }
 
 .login-intro__canvas {
