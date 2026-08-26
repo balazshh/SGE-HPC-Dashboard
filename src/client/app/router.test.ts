@@ -1,7 +1,12 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-import { clientRoute } from "./router";
+import { preloadAuth } from "../lib/auth-client";
+import { clientRoute, routes } from "./router";
+
+test("root route preloads authentication before rendering", () => {
+  expect(routes["/"].beforeLoad).toBe(preloadAuth);
+});
 
 test("client routing keeps internal navigation in the document", () => {
   const current = "https://dashboard.example/nodes";

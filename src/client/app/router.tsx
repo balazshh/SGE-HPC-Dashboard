@@ -1,9 +1,12 @@
 import type { ComponentType, ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { AuthGate } from "../components/AuthGate";
+import { LoginIntro, loginIntroRequested } from "../components/LoginIntro";
 import { BoschLogo } from "../components/BoschLogo";
 import { UserMenu } from "../components/UserMenu";
+import { preloadAuth } from "../lib/auth-client";
+import type { ClientSession } from "../lib/auth-client";
 import { CLIENT_NAVIGATION_EVENT, navigate } from "../lib/navigation";
 import { useUi } from "../lib/ui";
 import { DashboardPage } from "../pages/DashboardPage";
@@ -13,12 +16,18 @@ import { LoginPage } from "../pages/LoginPage";
 import { NodesPage } from "../pages/NodesPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 
-const routes: Record<string, ComponentType> = {
-  "/": DashboardPage,
-  "/login": LoginPage,
-  "/nodes": NodesPage,
-  "/jobs": JobsPage,
-  "/history": HistoryPage,
+interface AppRoute {
+  component: ComponentType;
+  protected?: boolean;
+  beforeLoad?: () => Promise<ClientSession | null>;
+}
+
+export const routes: Record<string, AppRoute> = {
+  "/": { component: DashboardPage, protected: true, beforeLoad: preloadAuth },
+  "/login": { component: LoginPage },
+  "/nodes": { component: NodesPage, protected: true },
+  "/jobs": { component: JobsPage, protected: true },
+  "/history": { component: HistoryPage, protected: true },
 };
 
 function currentPathname() {
@@ -65,6 +74,25 @@ function usePathname() {
   }, []);
 
   return pathname;
+}
+
+function useBeforeLoad(pathname: string, route?: AppRoute) {
+  const pending = useMemo(() => route?.beforeLoad?.(), [route]);
+  const [result, setResult] = useState<{ pathname: string; data: ClientSession | null } | null>(null);
+
+  useEffect(() => {
+    if (!pending) return;
+    let active = true;
+    void pending.then((data) => {
+      if (active) setResult({ pathname, data });
+    });
+    return () => { active = false; };
+  }, [pathname, pending]);
+
+  return {
+    loading: Boolean(pending && result?.pathname !== pathname),
+    data: result?.pathname === pathname ? result.data : undefined,
+  };
 }
 
 function AppShell({ children, pathname }: { children: ReactNode; pathname: string }) {
@@ -121,9 +149,18 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
 
 export function AppRouter() {
   const pathname = usePathname();
-  const Page = routes[pathname] ?? NotFoundPage;
-  const content = pathname in routes && pathname !== "/login"
-    ? <AuthGate><Page /></AuthGate>
+  const route = routes[pathname];
+  const beforeLoad = useBeforeLoad(pathname, route);
+
+  if (beforeLoad.loading) {
+    const showIntro = loginIntroRequested()
+      && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    return showIntro ? <LoginIntro playing={false} onComplete={() => {}} /> : null;
+  }
+
+  const Page = route?.component ?? NotFoundPage;
+  const content = route?.protected
+    ? <AuthGate preloadedSession={beforeLoad.data}><Page /></AuthGate>
     : <Page />;
 
   return <AppShell pathname={pathname}>{content}</AppShell>;

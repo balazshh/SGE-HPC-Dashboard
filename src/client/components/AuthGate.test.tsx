@@ -20,6 +20,8 @@ mock.module("../lib/auth-client", () => ({
   authClient: {
     useSession: () => session,
   },
+  clearAuthPreload: () => {},
+  preloadAuth: async () => null,
 }));
 
 const { AuthGate } = await import("./AuthGate");
@@ -32,9 +34,11 @@ test("login intro holds its first frame while the session loads", () => {
   expect(html).not.toContain("data-dashboard");
 });
 
-test("login intro starts after the authenticated session loads", () => {
-  session = { data: { user: { name: "Ada" } }, isPending: false };
-  const html = renderToStaticMarkup(<AuthGate><main data-dashboard /></AuthGate>);
+test("login intro starts from the route-preloaded session", () => {
+  const preloadedSession = { user: { name: "Ada" } } as never;
+  const html = renderToStaticMarkup(
+    <AuthGate preloadedSession={preloadedSession}><main data-dashboard /></AuthGate>,
+  );
 
   expect(html).toContain('data-playing="true"');
   expect(html).not.toContain("data-dashboard");
