@@ -211,10 +211,7 @@ h3 {
   gap: calc(var(--space-unit) * 2);
 }
 
-.user-menu__name {
-  max-width: 240px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.user-menu__email {
   white-space: nowrap;
 }
 
@@ -1069,10 +1066,6 @@ tbody tr:hover {
   .user-menu {
     margin-left: auto;
     flex-wrap: wrap;
-  }
-
-  .user-menu__name {
-    max-width: 160px;
   }
 
   .page {

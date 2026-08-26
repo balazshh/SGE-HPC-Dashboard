@@ -14,12 +14,18 @@ test("client routing keeps internal navigation in the document", () => {
 test("compact feed health lives in the header and page intros stay removed", () => {
   const router = readFileSync(new URL("./router.tsx", import.meta.url), "utf8");
   const freshness = readFileSync(new URL("../components/FreshnessBanner.tsx", import.meta.url), "utf8");
+  const userMenu = readFileSync(new URL("../components/UserMenu.tsx", import.meta.url), "utf8");
+  const css = readFileSync(new URL("./app.css", import.meta.url), "utf8");
   const pages = ["DashboardPage", "NodesPage", "JobsPage", "HistoryPage"]
     .map((name) => readFileSync(new URL(`../pages/${name}.tsx`, import.meta.url), "utf8"))
     .join("\n");
 
   expect(router).toContain("<HeaderFreshness />");
-  expect(freshness).not.toContain('t("lastUpdated")');
+  expect(freshness).toContain('<span className="freshness__label">{time}</span>');
+  expect(freshness).not.toContain('<span className="freshness__label">{label}</span>');
+  expect(userMenu).toContain('<strong className="user-menu__email">{user.email}</strong>');
+  expect(userMenu).not.toContain("{user.name}");
+  expect(css).not.toContain("text-overflow: ellipsis");
   for (const key of ["dashboardLede", "liveNodeInventory", "nodesPageLede", "activeJobsAndHistory", "jobsPageLede", "personalHistoricalTrends", "historyPageLede"]) {
     expect(pages).not.toContain(`t("${key}")`);
   }

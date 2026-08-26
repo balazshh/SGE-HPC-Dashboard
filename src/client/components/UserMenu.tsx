@@ -26,7 +26,7 @@ export function UserMenu() {
       </select>
       {user && (
         <>
-          <strong className="user-menu__name" title={user.email}>{user.name}</strong>
+          <strong className="user-menu__email">{user.email}</strong>
           <button className="btn btn-quiet" type="button" onClick={signOut}>
             {t("signOut")}
           </button>

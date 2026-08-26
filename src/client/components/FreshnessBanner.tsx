@@ -23,7 +23,7 @@ export function FreshnessBanner({ updatedAt }: FreshnessBannerProps) {
       title={description}
     >
       <span className="freshness__signal" aria-hidden="true" />
-      <span className="freshness__label">{label}</span>
+      <span className="freshness__label">{time}</span>
     </span>
   );
 }
