@@ -9,6 +9,7 @@ import {
 } from "react";
 
 export type Language = "en" | "de" | "hu";
+type Theme = "light" | "dark";
 
 const english = {
   navPrimary: "Primary",
@@ -17,6 +18,8 @@ const english = {
   navJobs: "My Jobs",
   navHistory: "My History",
   signOut: "Sign out",
+  darkMode: "Dark mode",
+  lightMode: "Light mode",
   language: "Language",
   loadingSignIn: "Loading sign-in…",
   signInTitle: "Sign in",
@@ -150,6 +153,8 @@ const translations = {
     navJobs: "Jobs",
     navHistory: "Verlauf",
     signOut: "Logout",
+    darkMode: "Dunkelmodus",
+    lightMode: "Hellmodus",
     language: "Sprache",
     loadingSignIn: "Anmeldung wird geladen…",
     signInTitle: "Anmelden",
@@ -278,6 +283,8 @@ const translations = {
     navJobs: "Munkák",
     navHistory: "Előzmény",
     signOut: "Kilépés",
+    darkMode: "Sötét mód",
+    lightMode: "Világos mód",
     language: "Nyelv",
     loadingSignIn: "Bejelentkezés betöltése…",
     signInTitle: "Bejelentkezés",
@@ -445,6 +452,8 @@ function readStored<T extends string>(key: string, fallback: T) {
 interface UiContextValue {
   language: Language;
   setLanguage: (language: Language) => void;
+  theme: Theme;
+  toggleTheme: () => void;
   t: (key: TranslationKey, values?: Record<string, string | number>) => string;
   statusLabel: (value: string) => string;
   freshnessLabel: (level: FreshnessLevel) => string;
@@ -457,17 +466,25 @@ export function UiProvider({ children }: { children: ReactNode }) {
     const language = readStored("language", "en");
     return languageOptions.some((option) => option.value === language) ? language as Language : "en";
   });
+  const [theme, setTheme] = useState<Theme>(() => readStored<Theme>("theme", "light"));
 
   useEffect(() => {
     window.localStorage.setItem("language", language);
     document.documentElement.lang = language;
   }, [language]);
 
+  useEffect(() => {
+    window.localStorage.setItem("theme", theme);
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
   const value = useMemo<UiContextValue>(() => {
     const table = translations[language];
     return {
       language,
       setLanguage,
+      theme,
+      toggleTheme: () => setTheme((value) => value === "dark" ? "light" : "dark"),
       t: (key, values) => fill(table[key], values),
       statusLabel: (value) => {
         const key = statusKeys[value as keyof typeof statusKeys];
@@ -475,7 +492,7 @@ export function UiProvider({ children }: { children: ReactNode }) {
       },
       freshnessLabel: (level) => table[freshnessKeys[level]],
     };
-  }, [language]);
+  }, [language, theme]);
 
   return <UiContext.Provider value={value}>{children}</UiContext.Provider>;
 }

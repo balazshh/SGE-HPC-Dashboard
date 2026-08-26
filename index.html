@@ -21,6 +21,9 @@
     </style>
     <script>
       try {
+        if (localStorage.getItem("theme") === "dark") document.documentElement.dataset.theme = "dark";
+      } catch {}
+      try {
         if (sessionStorage.getItem("play-login-intro") === "1" && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
           document.documentElement.classList.add("login-intro-pending");
         }

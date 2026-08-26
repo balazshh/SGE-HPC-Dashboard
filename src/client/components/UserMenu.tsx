@@ -4,7 +4,7 @@ import { languageOptions, useUi } from "../lib/ui";
 
 export function UserMenu() {
   const session = authClient.useSession();
-  const { language, setLanguage, t } = useUi();
+  const { language, setLanguage, theme, toggleTheme, t } = useUi();
   const user = session.data?.user;
 
   async function signOut() {
@@ -32,6 +32,15 @@ export function UserMenu() {
           </button>
         </>
       )}
+      <button
+        className="theme-toggle"
+        type="button"
+        aria-label={theme === "dark" ? t("lightMode") : t("darkMode")}
+        title={theme === "dark" ? t("lightMode") : t("darkMode")}
+        onClick={toggleTheme}
+      >
+        <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+      </button>
     </div>
   );
 }
