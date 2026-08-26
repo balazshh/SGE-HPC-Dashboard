@@ -175,7 +175,7 @@ const translations = {
     usedOfTotalSlots: "{used} genutzt / {total} Slots gesamt",
     runningJobs: "Laufende Jobs",
     queuedJobs: "Wartende Jobs",
-    failedJobs: "Fehlgeschlagene Jobs",
+    failedJobs: "Fehljobs",
     jobsOnHold: "Jobs in Wartestellung",
     clusterActivity: "Clusteraktivität",
     last24Hours: "Letzte 24 Stunden",
