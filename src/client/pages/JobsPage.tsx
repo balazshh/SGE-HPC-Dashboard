@@ -40,13 +40,6 @@ export function JobsPage() {
 
   return (
     <main className="page">
-      <section className="page-header">
-        <div>
-          <h1>{t("activeJobsAndHistory")}</h1>
-          <p className="lede">{t("jobsPageLede")}</p>
-        </div>
-      </section>
-
       <section className="surface">
         <div className="section-title-row">
           <div>

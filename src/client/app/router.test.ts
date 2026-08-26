@@ -11,6 +11,20 @@ test("client routing keeps internal navigation in the document", () => {
   expect(clientRoute("#main-content", current)).toBeNull();
 });
 
+test("compact feed health lives in the header and page intros stay removed", () => {
+  const router = readFileSync(new URL("./router.tsx", import.meta.url), "utf8");
+  const freshness = readFileSync(new URL("../components/FreshnessBanner.tsx", import.meta.url), "utf8");
+  const pages = ["DashboardPage", "NodesPage", "JobsPage", "HistoryPage"]
+    .map((name) => readFileSync(new URL(`../pages/${name}.tsx`, import.meta.url), "utf8"))
+    .join("\n");
+
+  expect(router).toContain("<HeaderFreshness />");
+  expect(freshness).not.toContain('t("lastUpdated")');
+  for (const key of ["dashboardLede", "liveNodeInventory", "nodesPageLede", "activeJobsAndHistory", "jobsPageLede", "personalHistoricalTrends", "historyPageLede"]) {
+    expect(pages).not.toContain(`t("${key}")`);
+  }
+});
+
 test("post-auth HTML paints the intro first frame before the app loads", () => {
   const html = readFileSync(new URL("../../../index.html", import.meta.url), "utf8");
 

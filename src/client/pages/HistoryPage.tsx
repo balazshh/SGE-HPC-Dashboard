@@ -34,27 +34,21 @@ export function HistoryPage() {
 
   return (
     <main className="page">
-      <section className="page-header">
+      <div className="preset-group" role="group" aria-label={t("range")}>
         <div>
-          <h1>{t("personalHistoricalTrends")}</h1>
-          <p className="lede">{t("historyPageLede")}</p>
+          {PRESETS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={option === preset ? "btn btn-primary" : "btn btn-secondary"}
+              onClick={() => setPreset(option)}
+              aria-pressed={option === preset}
+            >
+              {option}
+            </button>
+          ))}
         </div>
-        <div className="preset-group" role="group" aria-label={t("range")}>
-          <div>
-            {PRESETS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                className={option === preset ? "btn btn-primary" : "btn btn-secondary"}
-                onClick={() => setPreset(option)}
-                aria-pressed={option === preset}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
+      </div>
 
       <section className="metric-grid metric-grid--history">
         <MetricCard label={t("submitted")} value={totals.submitted} detail={t("acrossPreset", { preset })} />

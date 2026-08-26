@@ -2,7 +2,7 @@ import type { NodeRecord } from "../../shared/types/hpc";
 import { MetricCard } from "../components/MetricCard";
 import { StatusPill } from "../components/StatusPill";
 import { useApi } from "../lib/api";
-import { formatBudapestDateTime, formatMemoryGigabytes } from "../lib/format";
+import { formatMemoryGigabytes } from "../lib/format";
 import { useUi } from "../lib/ui";
 
 function readNumber(value?: string | null) {
@@ -23,7 +23,6 @@ export function NodesPage() {
   }
 
   const items = nodes.data;
-  const updatedAt = items[0]?.lastSeenAt;
   const counts = items.reduce((summary, node) => {
     summary[node.status] += 1;
     if (node.status === "ok") {
@@ -36,19 +35,6 @@ export function NodesPage() {
 
   return (
     <main className="page">
-      <section className="page-header">
-        <div>
-          <h1>{t("liveNodeInventory")}</h1>
-          <p className="lede">{t("nodesPageLede")}</p>
-        </div>
-        {updatedAt ? (
-          <div className="page-header__meta">
-            <span className="muted">{t("lastUpdated")}</span>
-            <strong>{formatBudapestDateTime(updatedAt)}</strong>
-          </div>
-        ) : null}
-      </section>
-
       <section className="metric-grid" aria-label={t("nodes")}>
         <MetricCard label={t("totalNodes")} value={items.length} detail={t("nodesFromQhost")} />
         <MetricCard label={t("okNodes")} value={counts.ok} detail={t("completeQhostRows")} />

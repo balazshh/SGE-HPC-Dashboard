@@ -13,15 +13,17 @@ export function FreshnessBanner({ updatedAt }: FreshnessBannerProps) {
   const label = freshnessLabel(level);
   const time = formatBudapestDateTime(updatedAt);
 
+  const description = t("freshnessBanner", { label, time });
+
   return (
-    <section
+    <span
       className={`freshness freshness--${level}`}
-      aria-live="polite"
-      aria-label={t("freshnessBanner", { label, time })}
+      role="status"
+      aria-label={description}
+      title={description}
     >
       <span className="freshness__signal" aria-hidden="true" />
-      <strong>{label}</strong>
-      <span className="muted">{t("lastUpdated")}: {time}</span>
-    </section>
+      <span className="freshness__label">{label}</span>
+    </span>
   );
 }

@@ -1,9 +1,12 @@
 import type { ComponentType, ReactNode } from "react";
 import { useEffect, useState } from "react";
 
+import type { ClusterSummary } from "../../shared/types/hpc";
 import { AuthGate } from "../components/AuthGate";
+import { FreshnessBanner } from "../components/FreshnessBanner";
 import { BoschLogo } from "../components/BoschLogo";
 import { UserMenu } from "../components/UserMenu";
+import { useApi } from "../lib/api";
 import { CLIENT_NAVIGATION_EVENT, navigate } from "../lib/navigation";
 import { useUi } from "../lib/ui";
 import { DashboardPage } from "../pages/DashboardPage";
@@ -67,6 +70,11 @@ function usePathname() {
   return pathname;
 }
 
+function HeaderFreshness() {
+  const summary = useApi<ClusterSummary>("/api/dashboard/summary");
+  return summary.data ? <FreshnessBanner updatedAt={summary.data.updatedAt} /> : null;
+}
+
 function AppShell({ children, pathname }: { children: ReactNode; pathname: string }) {
   const { t } = useUi();
   const navItems = [
@@ -88,6 +96,7 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
             <div className="site-header__left">
               <BoschLogo />
               <span className="site-header__product">SGE HPC</span>
+              {showNavigation && <HeaderFreshness />}
             </div>
             <UserMenu />
           </div>

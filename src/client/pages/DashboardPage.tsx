@@ -1,5 +1,4 @@
 import type { ClusterHistoryPoint, ClusterSummary, JobRecord } from "../../shared/types/hpc";
-import { FreshnessBanner } from "../components/FreshnessBanner";
 import { MetricCard } from "../components/MetricCard";
 import { StatusPill } from "../components/StatusPill";
 import { TimeChart } from "../components/TimeChart";
@@ -30,15 +29,6 @@ export function DashboardPage() {
 
   return (
     <main className="page">
-      <section className="page-header">
-        <div>
-          <h1>{t("clusterActivity")}</h1>
-          <p className="lede">{t("dashboardLede")}</p>
-        </div>
-      </section>
-
-      <FreshnessBanner updatedAt={summary.data.updatedAt} />
-
       <section className="metric-grid metric-grid--dashboard" aria-label={t("dashboard")}>
         <article className="surface metric-card metric-card--featured">
           <div>
