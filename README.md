@@ -22,6 +22,26 @@ cp .env.example .env
 
 Fill `.env`; `APP_BASE_URL` must be the final HTTPS URL and all Entra values are required.
 
+### Microsoft Entra ID
+
+In the Azure portal, open **Microsoft Entra ID → App registrations → your app → Authentication**, add a **Web** platform, and register this redirect URI:
+
+```text
+https://your-dashboard.example.com/api/auth/oauth2/callback/microsoft-entra-id
+```
+
+Set `APP_BASE_URL` to the public HTTPS origin without a trailing slash. The redirect URI must exactly equal `${APP_BASE_URL}/api/auth/oauth2/callback/microsoft-entra-id`; do not configure it as a Single-page application URI. Add one redirect URI for every dashboard URL, or use separate app registrations.
+
+Set the matching values in `.env`:
+
+```dotenv
+APP_BASE_URL=https://your-dashboard.example.com
+BETTER_AUTH_SECRET=<output of: openssl rand -hex 32>
+ENTRA_CLIENT_ID=<Application (client) ID>
+ENTRA_TENANT_ID=<Directory (tenant) ID>
+ENTRA_CLIENT_SECRET=<client secret Value, not its Secret ID>
+```
+
 ### Database
 
 For a fresh database, create the database/user, then apply the schema files in order:
@@ -32,11 +52,9 @@ CREATE USER 'hpc_dashboard_test_db_user'@'%' IDENTIFIED BY 'change-me';
 GRANT ALL PRIVILEGES ON hpc_dashboard_test_db.* TO 'hpc_dashboard_test_db_user'@'%';
 USE hpc_dashboard_test_db;
 SOURCE drizzle/0000_initial.sql;
-SOURCE drizzle/0001_ponytail_cleanup.sql;
-SOURCE drizzle/0002_cluster_history.sql;
 ```
 
-Keep these database names aligned with `.env` and `scripts/hpc/collector.env`. `0001_ponytail_cleanup.sql` removes obsolete collector columns and rollup tables. Existing installations must follow the coordinated upgrade below before applying it.
+Keep these database names aligned with `.env` and `scripts/hpc/collector.env`.
 
 ### Build and run
 
@@ -110,25 +128,6 @@ Install only these cron jobs:
 The dashboard's utilization and active-job charts fill from live snapshots over the next 24 hours after deployment. Cleanup retains two days of snapshots.
 
 History charts group the indexed `jobs_history` table directly; there is no rollup job.
-
-## Existing-install upgrade
-
-`0001_ponytail_cleanup.sql` is destructive. Back up MySQL first; restoring removed columns requires that backup.
-
-1. Disable the old live, history, rollup, and cleanup cron entries; wait for running collectors to finish.
-2. Apply each migration that has not already been applied (`0001` only for installations that still need the cleanup):
-
-   ```sql
-   USE hpc_dashboard_test_db;
-   SOURCE drizzle/0001_ponytail_cleanup.sql;
-   SOURCE drizzle/0002_cluster_history.sql;
-   ```
-
-3. Build and deploy the new web image, then install the new collector scripts.
-4. Run `self-check.sh`, `collect-live.sh`, `collect-history.sh`, and `cleanup-old-data.sh` once.
-5. Restore only the three cron entries shown above.
-
-Do not run old collectors after `0001`; they still target the removed columns.
 
 ## Normal update
 
