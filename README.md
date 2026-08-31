@@ -97,6 +97,8 @@ cp scripts/hpc/collector.env.example scripts/hpc/collector.env
 ./scripts/hpc/cleanup-old-data.sh
 ```
 
+Set `DB2_*` in `collector.env` to write every collector run to a second database, such as a test web VM. A failure on either target is logged without blocking the other target, and the run exits non-zero if either target failed. The cron entries remain unchanged.
+
 Install only these cron jobs:
 
 ```cron

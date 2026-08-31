@@ -16,6 +16,11 @@ load_collector_env() {
   export DB_NAME="${DB_NAME:-}"
   export DB_USER="${DB_USER:-}"
   export DB_PASSWORD="${DB_PASSWORD:-}"
+  export DB2_HOST="${DB2_HOST:-}"
+  export DB2_PORT="${DB2_PORT:-3306}"
+  export DB2_NAME="${DB2_NAME:-}"
+  export DB2_USER="${DB2_USER:-}"
+  export DB2_PASSWORD="${DB2_PASSWORD:-}"
   export HPC_TZ="${HPC_TZ:-Europe/Budapest}"
   export QSTAT_CLUSTER_COMMAND="${QSTAT_CLUSTER_COMMAND:-qstat -g c}"
   export QSTAT_JOBS_COMMAND="${QSTAT_JOBS_COMMAND:-qstat -u '*'}"
@@ -53,26 +58,85 @@ collector_init() {
   require_env DB_NAME
   require_env DB_USER
   require_env DB_PASSWORD
+
+  if second_target_enabled; then
+    require_env DB2_HOST
+    require_env DB2_PORT
+    require_env DB2_NAME
+    require_env DB2_USER
+    require_env DB2_PASSWORD
+  elif [[ -n "$DB2_HOST$DB2_NAME$DB2_USER$DB2_PASSWORD" ]]; then
+    echo "incomplete DB2_* second target config" >&2
+    exit 1
+  fi
 }
 
-mysql_exec() {
-  MYSQL_PWD="$DB_PASSWORD" mysql \
+second_target_enabled() {
+  [[ -n "$DB2_HOST" && -n "$DB2_NAME" && -n "$DB2_USER" ]]
+}
+
+mysql_targets() {
+  echo primary
+  if second_target_enabled; then
+    echo second
+  fi
+}
+
+mysql_target_file() {
+  local target="$1" file="$2" host port name user password
+  case "$target" in
+    primary) host="$DB_HOST"; port="$DB_PORT"; name="$DB_NAME"; user="$DB_USER"; password="$DB_PASSWORD" ;;
+    second) host="$DB2_HOST"; port="$DB2_PORT"; name="$DB2_NAME"; user="$DB2_USER"; password="$DB2_PASSWORD" ;;
+    *) echo "unknown mysql target: $target" >&2; return 1 ;;
+  esac
+  MYSQL_PWD="$password" mysql \
     --no-defaults \
     --default-character-set=utf8mb4 \
-    -h "$DB_HOST" \
-    -P "$DB_PORT" \
-    -u "$DB_USER" \
-    "$DB_NAME" "$@"
+    -h "$host" \
+    -P "$port" \
+    -u "$user" \
+    "$name" < "$file"
+}
+
+mysql_target_exec() {
+  local target="$1" host port name user password
+  case "$target" in
+    primary) host="$DB_HOST"; port="$DB_PORT"; name="$DB_NAME"; user="$DB_USER"; password="$DB_PASSWORD" ;;
+    second) host="$DB2_HOST"; port="$DB2_PORT"; name="$DB2_NAME"; user="$DB2_USER"; password="$DB2_PASSWORD" ;;
+    *) echo "unknown mysql target: $target" >&2; return 1 ;;
+  esac
+  MYSQL_PWD="$password" mysql \
+    --no-defaults \
+    --default-character-set=utf8mb4 \
+    -h "$host" \
+    -P "$port" \
+    -u "$user" \
+    "$name"
 }
 
 mysql_file() {
-  MYSQL_PWD="$DB_PASSWORD" mysql \
-    --no-defaults \
-    --default-character-set=utf8mb4 \
-    -h "$DB_HOST" \
-    -P "$DB_PORT" \
-    -u "$DB_USER" \
-    "$DB_NAME" < "$1"
+  local file="$1" target name failed=0
+  while read -r target; do
+    [[ "$target" == primary ]] && name="$DB_NAME" || name="$DB2_NAME"
+    if ! mysql_target_file "$target" "$file"; then
+      echo "mysql target=$target db=$name failed" >&2
+      failed=1
+    fi
+  done < <(mysql_targets)
+  return "$failed"
+}
+
+mysql_exec() {
+  local sql target name failed=0
+  sql="$(cat)"
+  while read -r target; do
+    [[ "$target" == primary ]] && name="$DB_NAME" || name="$DB2_NAME"
+    if ! printf '%s\n' "$sql" | mysql_target_exec "$target"; then
+      echo "mysql target=$target db=$name failed" >&2
+      failed=1
+    fi
+  done < <(mysql_targets)
+  return "$failed"
 }
 
 run_command_or_cat() {
