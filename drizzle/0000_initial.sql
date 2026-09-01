@@ -92,9 +92,21 @@ CREATE TABLE jobs_current (
   state_group enum('queued','running','hold','suspended','error','finished','deleted') NOT NULL,
   submitted_at datetime NOT NULL,
   started_at datetime NULL,
+  slots int NOT NULL DEFAULT 1,
   UNIQUE KEY jobs_current_job_id_unique (job_id),
   KEY jobs_current_owner_idx (owner),
   KEY jobs_current_state_group_idx (state_group)
+);
+
+CREATE TABLE queues_current (
+  id serial PRIMARY KEY,
+  queue_name varchar(255) NOT NULL,
+  used_slots int NOT NULL,
+  reserved_slots int NOT NULL,
+  free_slots int NOT NULL,
+  total_slots int NOT NULL,
+  last_seen_at datetime NOT NULL,
+  UNIQUE KEY queues_current_queue_name_unique (queue_name)
 );
 
 CREATE TABLE jobs_history (
