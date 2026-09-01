@@ -3,12 +3,14 @@ import { and, desc, eq, gte, sql } from "drizzle-orm";
 import type {
   ClusterHistoryPoint,
   ClusterSummary,
+  DashboardOperations,
   HistoryBucket,
   HistoryPreset,
   JobRecord,
   JobsFilterInput,
   NodeRecord,
   PaginatedJobs,
+  SolverLoad,
 } from "../../shared/types/hpc";
 import { db } from "../db";
 import {
@@ -16,7 +18,8 @@ import {
   jobsCurrent,
   jobsHistory,
   nodesCurrent,
-} from "../db/schema";
+  queuesCurrent,
+} from "../db/schema/hpc";
 
 function mapCurrentJob(job: typeof jobsCurrent.$inferSelect): JobRecord {
   return {
@@ -25,7 +28,49 @@ function mapCurrentJob(job: typeof jobsCurrent.$inferSelect): JobRecord {
     state: job.stateGroup,
     submittedAt: job.submittedAt.toISOString(),
     startedAt: job.startedAt?.toISOString(),
+    slots: job.slots,
   };
+}
+
+export const KNOWN_SOLVERS = ["ANSYS Mechanical", "ANSYS Fluent", "ANSYS LS-DYNA", "ANSYS CFX", "ABAQUS", "COMSOL"] as const;
+
+const SOLVER_PREFIXES: Array<[prefix: string, solver: string]> = [
+  ["mechanical_", "ANSYS Mechanical"],
+  ["fluent_", "ANSYS Fluent"],
+  ["lsdyna_", "ANSYS LS-DYNA"],
+  ["cfx_", "ANSYS CFX"],
+  ["abaqus_", "ABAQUS"],
+  ["comsol_", "COMSOL"],
+];
+
+export function classifySolver(jobName: string): string {
+  const name = jobName.toLowerCase();
+  const match = SOLVER_PREFIXES.find(([prefix]) => name.startsWith(prefix));
+  return match ? match[1] : "Other";
+}
+
+export function aggregateSolverLoads(jobs: Array<{ name: string; state: string; slots: number }>): SolverLoad[] {
+  const empty = { runningJobs: 0, runningSlots: 0, queuedJobs: 0, queuedSlots: 0 };
+  const counts = new Map<string, typeof empty>();
+
+  for (const job of jobs) {
+    if (job.state !== "running" && job.state !== "queued") continue;
+    const solver = classifySolver(job.name);
+    const entry = counts.get(solver) ?? { ...empty };
+    if (job.state === "running") {
+      entry.runningJobs += 1;
+      entry.runningSlots += job.slots;
+    } else {
+      entry.queuedJobs += 1;
+      entry.queuedSlots += job.slots;
+    }
+    counts.set(solver, entry);
+  }
+
+  const loads: SolverLoad[] = KNOWN_SOLVERS.map((solver) => ({ solver, ...counts.get(solver) ?? { ...empty } }));
+  const other = counts.get("Other");
+  if (other) loads.push({ solver: "Other", ...other });
+  return loads;
 }
 
 function mapNode(node: typeof nodesCurrent.$inferSelect): NodeRecord {
@@ -78,16 +123,17 @@ function matchesQuery(job: JobRecord, query?: string) {
 }
 
 export async function getDashboardSummary(owner: string): Promise<ClusterSummary> {
-  const [latest] = await db
-    .select()
-    .from(clusterSnapshots)
-    .orderBy(desc(clusterSnapshots.recordedAt))
-    .limit(1);
-
-  const myJobs = await db
-    .select()
-    .from(jobsCurrent)
-    .where(eq(jobsCurrent.owner, owner));
+  const [[latest], myJobs] = await Promise.all([
+    db
+      .select()
+      .from(clusterSnapshots)
+      .orderBy(desc(clusterSnapshots.recordedAt))
+      .limit(1),
+    db
+      .select()
+      .from(jobsCurrent)
+      .where(eq(jobsCurrent.owner, owner)),
+  ]);
 
   if (!latest) {
     return {
@@ -152,6 +198,39 @@ export async function getActiveJobs(owner: string) {
     .orderBy(desc(jobsCurrent.submittedAt));
 
   return rows.map(mapCurrentJob);
+}
+
+export async function getDashboardOperations(): Promise<DashboardOperations> {
+  const [queues, jobs] = await Promise.all([
+    db.select().from(queuesCurrent).orderBy(queuesCurrent.queueName),
+    db.select().from(jobsCurrent),
+  ]);
+
+  const queued = jobs.filter((job) => job.stateGroup === "queued");
+  const oldestQueuedAt = queued.length
+    ? queued
+        .map((job) => job.submittedAt)
+        .reduce((oldest, value) => (value < oldest ? value : oldest))
+        .toISOString()
+    : null;
+
+  return {
+    queues: queues.map((queue) => ({
+      queueName: queue.queueName,
+      usedSlots: queue.usedSlots,
+      reservedSlots: queue.reservedSlots,
+      freeSlots: queue.freeSlots,
+      totalSlots: queue.totalSlots,
+    })),
+    queuePressure: {
+      queuedJobs: queued.length,
+      queuedSlots: queued.reduce((sum, job) => sum + job.slots, 0),
+      oldestQueuedAt,
+    },
+    solverLoads: aggregateSolverLoads(
+      jobs.map((job) => ({ name: job.name, state: job.stateGroup, slots: job.slots }))
+    ),
+  };
 }
 
 export async function getJobHistory(owner: string, input: JobsFilterInput = {}): Promise<PaginatedJobs> {

@@ -66,11 +66,28 @@ export const jobsCurrent = mysqlTable(
     stateGroup: mysqlEnum("state_group", jobStates).notNull(),
     submittedAt: datetime("submitted_at", { mode: "date" }).notNull(),
     startedAt: datetime("started_at", { mode: "date" }),
+    slots: int("slots").notNull().default(1),
   },
   (table) => ({
     jobIdUnique: uniqueIndex("jobs_current_job_id_unique").on(table.jobId),
     ownerIdx: index("jobs_current_owner_idx").on(table.owner),
     stateIdx: index("jobs_current_state_group_idx").on(table.stateGroup),
+  }),
+);
+
+export const queuesCurrent = mysqlTable(
+  "queues_current",
+  {
+    id: serial("id").primaryKey(),
+    queueName: varchar("queue_name", { length: 255 }).notNull(),
+    usedSlots: int("used_slots").notNull(),
+    reservedSlots: int("reserved_slots").notNull(),
+    freeSlots: int("free_slots").notNull(),
+    totalSlots: int("total_slots").notNull(),
+    lastSeenAt: datetime("last_seen_at", { mode: "date" }).notNull(),
+  },
+  (table) => ({
+    queueNameUnique: uniqueIndex("queues_current_queue_name_unique").on(table.queueName),
   }),
 );
 

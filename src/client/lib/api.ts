@@ -11,27 +11,28 @@ export function useApi<T>(path: string) {
     setError(null);
     setLoading(true);
 
-    (async () => {
-      try {
-        const response = await fetch(path, {
-          credentials: "include",
-          signal: controller.signal,
-        });
-
+    void fetch(path, {
+      credentials: "include",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
         if (!response.ok) {
           const body = await response.json().catch(() => null) as { error?: string } | null;
           throw new Error(body?.error ?? `Request failed: ${response.status}`);
         }
-
-        setData(await response.json() as T);
-      } catch (nextError) {
-        if (!(nextError instanceof DOMException && nextError.name === "AbortError")) {
+        return response.json() as Promise<T>;
+      })
+      .then((nextData) => {
+        if (!controller.signal.aborted) setData(nextData);
+      })
+      .catch((nextError) => {
+        if (!controller.signal.aborted && !(nextError instanceof DOMException && nextError.name === "AbortError")) {
           setError(nextError instanceof Error ? nextError.message : "Request failed");
         }
-      } finally {
+      })
+      .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
-      }
-    })();
+      });
 
     return () => controller.abort();
   }, [path]);

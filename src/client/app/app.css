@@ -523,6 +523,116 @@ legend,
   gap: calc(var(--space-unit) * 3);
 }
 
+.operations-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(var(--space-unit) * 3);
+  align-items: start;
+}
+
+.operations-block {
+  display: grid;
+  gap: calc(var(--space-unit) * 3);
+  padding: calc(var(--space-unit) * 4);
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-surface);
+}
+
+.queue-capacity-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: calc(var(--space-unit) * 3);
+  list-style: none;
+}
+
+.queue-capacity {
+  display: grid;
+  gap: var(--space-unit);
+}
+
+.queue-capacity__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: calc(var(--space-unit) * 2);
+  overflow-wrap: anywhere;
+}
+
+.queue-capacity__name {
+  font-weight: var(--font-weight-bold);
+}
+
+.queue-capacity__progress {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  appearance: none;
+  background: var(--color-border);
+  border: 0;
+  border-radius: 0;
+}
+
+.queue-capacity__progress::-webkit-progress-bar {
+  background: var(--color-border);
+}
+
+.queue-capacity__progress::-webkit-progress-value {
+  background: var(--bosch-blue);
+}
+
+.queue-capacity__progress::-moz-progress-bar {
+  background: var(--bosch-blue);
+}
+
+.queue-capacity__numbers {
+  font-size: 0.875rem;
+}
+
+.pressure-stats {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(var(--space-unit) * 3);
+}
+
+.pressure-stat {
+  display: grid;
+  gap: var(--space-unit);
+  padding: calc(var(--space-unit) * 2);
+  background: var(--color-background-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.pressure-stat dt {
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.pressure-stat dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 1.75rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+.solver-load-table {
+  min-width: 0;
+}
+
+.solver-load-table th,
+.solver-load-table td {
+  text-align: right;
+}
+
+.solver-load-table th:first-child,
+.solver-load-table td:first-child {
+  text-align: left;
+}
+
 .time-chart {
   display: grid;
   gap: calc(var(--space-unit) * 3);
@@ -1048,7 +1158,8 @@ tbody tr:hover {
     border-bottom-color: var(--bosch-blue);
   }
 
-  .dashboard-chart-grid {
+  .dashboard-chart-grid,
+  .operations-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1093,6 +1204,10 @@ tbody tr:hover {
 
   .time-chart__latest {
     justify-items: start;
+  }
+
+  .pressure-stats {
+    grid-template-columns: 1fr;
   }
 
   .preset-group div {

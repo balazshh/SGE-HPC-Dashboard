@@ -4,6 +4,7 @@ import { getHpcUsername, handleAuthRequest } from "./auth";
 import {
   getActiveJobs,
   getClusterHistory,
+  getDashboardOperations,
   getDashboardSummary,
   getHistory,
   getJobHistory,
@@ -68,6 +69,10 @@ Bun.serve({
 
     if (url.pathname === "/api/dashboard/history") {
       return withUser(request, async () => json(await getClusterHistory()));
+    }
+
+    if (url.pathname === "/api/dashboard/operations") {
+      return withUser(request, async () => json(await getDashboardOperations()));
     }
 
     if (url.pathname === "/api/nodes") {

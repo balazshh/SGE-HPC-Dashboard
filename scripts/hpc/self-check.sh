@@ -34,6 +34,7 @@ job-ID prior name user state submit/start at queue slots ja-task-ID
 102 0.500 wait-b alice qw 07/08/2026 11:00:00 8
 103 0.400 hold-c alice hqw 07/08/2026 11:30:00 2
 104 0.300 pause-d alice s 07/08/2026 11:45:00 all.q@n001 1
+105 0.250 noload-f alice s 07/08/2026 12:00:00
 EOF
 
 cat > "$workdir/qhost.txt" <<'EOF'
@@ -91,18 +92,31 @@ grep -q "'2026-07-08 08:00:00'" "$primary_capture"
 grep -q "'missing'" "$primary_capture"
 ! grep -q 'DELETE FROM cluster_snapshots' "$primary_capture"
 grep -q 'free_slots, job_count, running_jobs' "$primary_capture"
-grep -q '12, 4, 1, 1, 0, 1' "$primary_capture"
-grep -q 'INSERT INTO jobs_current (job_id, owner, name, state_group, submitted_at, started_at)' "$primary_capture"
+grep -q '12, 5, 1, 1, 0, 1' "$primary_capture"
+grep -q 'INSERT INTO jobs_current (job_id, owner, name, state_group, submitted_at, started_at, slots)' "$primary_capture"
+grep -qF "'train-a', 'running', '2026-07-08 08:00:00', '2026-07-08 08:00:00', 4)" "$primary_capture"
+grep -qF "'wait-b', 'queued', '2026-07-08 09:00:00', NULL, 8)" "$primary_capture"
+grep -qF "'noload-f', 'suspended', '2026-07-08 10:00:00', NULL, 1)" "$primary_capture"
+grep -q 'DELETE FROM queues_current' "$primary_capture"
+grep -q 'INSERT INTO queues_current (queue_name, used_slots, reserved_slots, free_slots, total_slots, last_seen_at)' "$primary_capture"
+grep -qF "'all.q', 4, 0, 12, 16" "$primary_capture"
 ! grep -q 'state_raw\|swapto_raw\|swapus_raw' "$primary_capture"
 [[ -s "$second_capture" ]]
 grep -q 'INSERT INTO cluster_snapshots' "$second_capture"
+grep -q 'INSERT INTO jobs_current (job_id, owner, name, state_group, submitted_at, started_at, slots)' "$second_capture"
+grep -q 'INSERT INTO queues_current' "$second_capture"
+
+history_capture="$workdir/mysql-history.sql"
+export MYSQL_CAPTURE="$history_capture"
+history_primary="${history_capture}__stub"
+history_second="${history_capture}__stub2"
 
 "$SCRIPT_DIR/collect-history.sh" >/dev/null
-grep -q "'finished'" "$primary_capture"
-grep -q "'error'" "$primary_capture"
-grep -q "'2026-07-08 08:00:00'" "$primary_capture"
-grep -q 'INSERT INTO jobs_history (job_id, owner, name, state_final, submitted_at, started_at, finished_at)' "$primary_capture"
-! grep -q 'slots\|queue' "$primary_capture"
-grep -q 'INSERT INTO jobs_history' "$second_capture"
+grep -q "'finished'" "$history_primary"
+grep -q "'error'" "$history_primary"
+grep -q "'2026-07-08 08:00:00'" "$history_primary"
+grep -q 'INSERT INTO jobs_history (job_id, owner, name, state_final, submitted_at, started_at, finished_at)' "$history_primary"
+! grep -q 'slots\|queue' "$history_primary"
+grep -q 'INSERT INTO jobs_history' "$history_second"
 
 echo "self-check ok"

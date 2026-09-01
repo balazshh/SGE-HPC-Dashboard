@@ -2,15 +2,15 @@ import { authClient } from "../lib/auth-client";
 import { navigate } from "../lib/navigation";
 import { languageOptions, useUi } from "../lib/ui";
 
+async function signOut() {
+  await authClient.signOut();
+  navigate("/login", { replace: true });
+}
+
 export function UserMenu() {
   const session = authClient.useSession();
   const { language, setLanguage, theme, toggleTheme, t } = useUi();
   const user = session.data?.user;
-
-  async function signOut() {
-    await authClient.signOut();
-    navigate("/login", { replace: true });
-  }
 
   return (
     <div className="user-menu">

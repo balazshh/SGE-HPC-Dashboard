@@ -53,6 +53,36 @@ export interface JobRecord {
   submittedAt: string;
   startedAt?: string;
   finishedAt?: string;
+  // jobs_history has no slot data, so history rows omit this field.
+  slots?: number;
+}
+
+export interface QueueCapacityRow {
+  queueName: string;
+  usedSlots: number;
+  reservedSlots: number;
+  freeSlots: number;
+  totalSlots: number;
+}
+
+export interface QueuePressure {
+  queuedJobs: number;
+  queuedSlots: number;
+  oldestQueuedAt: string | null;
+}
+
+export interface SolverLoad {
+  solver: string;
+  runningJobs: number;
+  runningSlots: number;
+  queuedJobs: number;
+  queuedSlots: number;
+}
+
+export interface DashboardOperations {
+  queues: QueueCapacityRow[];
+  queuePressure: QueuePressure;
+  solverLoads: SolverLoad[];
 }
 
 export interface JobsFilterInput {

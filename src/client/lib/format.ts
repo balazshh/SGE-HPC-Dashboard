@@ -7,33 +7,49 @@ const dateLocales: Record<Language, string> = {
   hu: "hu-HU",
 };
 
+const dateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+const numberFormatter = new Intl.NumberFormat("en-US");
+
+const historyBucketFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function historyBucketFormatter(preset: HistoryPreset, language: Language) {
+  const key = `${language}:${preset}`;
+  const cached = historyBucketFormatters.get(key);
+  if (cached) return cached;
+
+  const formatter = new Intl.DateTimeFormat(dateLocales[language], {
+    month: preset === "24h" ? undefined : "short",
+    day: preset === "1y" ? undefined : "2-digit",
+    hour: preset === "30d" || preset === "1y" ? undefined : "2-digit",
+    minute: preset === "30d" || preset === "1y" ? undefined : "2-digit",
+    hour12: false,
+  });
+  historyBucketFormatters.set(key, formatter);
+  return formatter;
+}
+
 export function formatBudapestDateTime(value?: string) {
   if (!value) return "—";
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
 
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+  return dateTimeFormatter.format(date);
 }
 
 export function formatHistoryBucketLabel(value: string, preset: HistoryPreset, language: Language) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
 
-  return new Intl.DateTimeFormat(dateLocales[language], {
-    month: preset === "24h" ? undefined : "short",
-    day: preset === "1y" ? undefined : "2-digit",
-    hour: preset === "30d" || preset === "1y" ? undefined : "2-digit",
-    minute: preset === "30d" || preset === "1y" ? undefined : "2-digit",
-    hour12: false,
-  }).format(date);
+  return historyBucketFormatter(preset, language).format(date);
 }
 
 export function formatNumber(value: number) {
-  return new Intl.NumberFormat("en-US").format(value);
+  return numberFormatter.format(value);
 }
 
 export function formatMemoryGigabytes(value?: string | null) {

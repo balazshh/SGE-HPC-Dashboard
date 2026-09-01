@@ -17,6 +17,7 @@ jobs_txt="$workdir/qstat-jobs.txt"
 qhost_txt="$workdir/qhost.txt"
 jobs_tsv="$workdir/jobs-current.tsv"
 nodes_tsv="$workdir/nodes-current.tsv"
+queues_tsv="$workdir/queues-current.tsv"
 summary_env="$workdir/summary.env"
 sql_file="$workdir/load-live.sql"
 recorded_at="$(date -u '+%F %T')"
@@ -38,6 +39,10 @@ read -r total_slots used_slots free_slots < <(
   ' "$cluster_txt"
 )
 
+awk 'NF && $1 != "CLUSTER" && $1 !~ /^-+$/ {
+  print $1, $3 + 0, $4 + 0, $5 + 0, $6 + 0
+}' OFS='\t' "$cluster_txt" > "$queues_tsv"
+
 awk -v summary_env="$summary_env" -v hpc_tz="$HPC_TZ" -v recorded_at="$recorded_at" '
 function state_group(raw) {
   if (raw == "r" || raw == "t" || raw == "Rr" || raw == "Rt") return "running";
@@ -57,6 +62,13 @@ function qstat_utc(date_part, time_part, date_bits, time_bits, year, epoch) {
   epoch = mktime(sprintf("%d %d %d %d %d %d", year, date_bits[1], date_bits[2], time_bits[1], time_bits[2], time_bits[3]));
   return epoch < 0 ? "" : strftime("%Y-%m-%d %H:%M:%S", epoch, 1);
 }
+function parse_slots(   i) {
+  if ($8 ~ /^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$/) return $9 ~ /^[0-9]+$/ ? $9 + 0 : 1;
+  for (i = NF; i >= 8; i--) {
+    if ($i ~ /^[0-9]+$/) return $i + 0;
+  }
+  return 1;
+}
 BEGIN {
   ENVIRON["TZ"] = hpc_tz;
   running = queued = failed = hold = total_jobs = 0;
@@ -70,13 +82,14 @@ NF && $1 != "job-ID" && $1 !~ /^-+$/ {
   scheduler_at = qstat_utc($6, $7);
   submitted_at = scheduler_at == "" ? recorded_at : scheduler_at;
   started_at = state == "running" ? submitted_at : "";
+  slots = parse_slots();
   total_jobs++;
   if (state == "running") running++;
   else if (state == "queued") queued++;
   else if (state == "error") failed++;
   else if (state == "hold") hold++;
 
-  print job_id, owner, name, state, submitted_at, started_at;
+  print job_id, owner, name, state, submitted_at, started_at, slots;
 }
 END {
   printf("running_jobs=%d\nqueued_jobs=%d\nfailed_jobs=%d\nhold_jobs=%d\ntotal_jobs=%d\n", running, queued, failed, hold, total_jobs) > summary_env;
@@ -113,6 +126,7 @@ VALUES
   ('${recorded_at}', ${total_slots}, ${used_slots}, ${free_slots}, ${total_jobs}, ${running_jobs}, ${queued_jobs}, ${failed_jobs}, ${hold_jobs}, '${health_status}', ${offline_node_count});
 DELETE FROM jobs_current;
 DELETE FROM nodes_current;
+DELETE FROM queues_current;
 SQL
 
 awk -F '\t' '
@@ -126,13 +140,13 @@ function quote(value) {
 }
 BEGIN {
   sq = sprintf("%c", 39);
-  prefix = "INSERT INTO jobs_current (job_id, owner, name, state_group, submitted_at, started_at) VALUES\n";
+  prefix = "INSERT INTO jobs_current (job_id, owner, name, state_group, submitted_at, started_at, slots) VALUES\n";
   batch_size = 500;
   count = 0;
 }
 NF {
   started_at = $6 == "" ? "NULL" : quote($6);
-  row = "  (" quote($1) ", " quote($2) ", " quote($3) ", " quote($4) ", " quote($5) ", " started_at ")";
+  row = "  (" quote($1) ", " quote($2) ", " quote($3) ", " quote($4) ", " quote($5) ", " started_at ", " ($7 + 0) ")";
   if (count == 0) {
     printf "%s%s", prefix, row;
   } else {
@@ -187,6 +201,39 @@ END {
   if (count > 0) printf ";\n";
 }
 ' "$nodes_tsv" >> "$sql_file"
+
+awk -F'\t' -v recorded_at="$recorded_at" '
+function esc(value) {
+  gsub(/\\/, "\\\\", value);
+  gsub(/\047/, "\047\047", value);
+  return value;
+}
+function quote(value) {
+  return sq esc(value) sq;
+}
+BEGIN {
+  sq = sprintf("%c", 39);
+  prefix = "INSERT INTO queues_current (queue_name, used_slots, reserved_slots, free_slots, total_slots, last_seen_at) VALUES\n";
+  batch_size = 500;
+  count = 0;
+}
+NF {
+  row = "  (" quote($1) ", " ($2 + 0) ", " ($3 + 0) ", " ($4 + 0) ", " ($5 + 0) ", " quote(recorded_at) ")";
+  if (count == 0) {
+    printf "%s%s", prefix, row;
+  } else {
+    printf ",\n%s", row;
+  }
+  count++;
+  if (count >= batch_size) {
+    printf ";\n";
+    count = 0;
+  }
+}
+END {
+  if (count > 0) printf ";\n";
+}
+' "$queues_tsv" >> "$sql_file"
 
 cat >> "$sql_file" <<'SQL'
 COMMIT;
