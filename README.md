@@ -56,14 +56,7 @@ SOURCE drizzle/0000_initial.sql;
 
 Keep these database names aligned with `.env` and `scripts/hpc/collector.env`.
 
-For an existing installation, back up the database and apply every numbered migration in filename order before restarting the collector or web app:
-
-```sql
-USE hpc_dashboard_test_db;
-SOURCE drizzle/0001_dashboard_overview.sql;
-```
-
-Run the same migration separately against the optional `DB2_*` database. The migration is safe to re-run on MySQL 8.
+The complete schema is consolidated in `drizzle/0000_initial.sql`; a fresh deployment only needs this schema file on the primary database and, if configured, the same schema on the optional `DB2_*` database.
 
 ### Build and run
 
@@ -150,7 +143,7 @@ docker rm -f hpc-dashboard 2>/dev/null || true
 docker run -d --name hpc-dashboard --env-file .env -p 127.0.0.1:3001:3001 --restart unless-stopped hpc-dashboard
 ```
 
-Apply every numbered SQL migration in filename order before restarting the web app or collectors. The dashboard overview requires `drizzle/0001_dashboard_overview.sql` on databases created from an older schema.
+The schema is consolidated in `drizzle/0000_initial.sql`; apply it before starting the web app or collectors on a fresh deployment.
 
 ## Troubleshooting
 
