@@ -1,9 +1,11 @@
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 
 import type {
+  Capacity,
   ClusterHistoryPoint,
   ClusterSummary,
   DashboardOperations,
+  DashboardOverview,
   HistoryBucket,
   HistoryPreset,
   JobRecord,
@@ -26,7 +28,7 @@ function mapCurrentJob(job: typeof jobsCurrent.$inferSelect): JobRecord {
     jobId: job.jobId,
     name: job.name,
     state: job.stateGroup,
-    submittedAt: job.submittedAt.toISOString(),
+    submittedAt: job.submittedAt?.toISOString() ?? null,
     startedAt: job.startedAt?.toISOString(),
     slots: job.slots,
   };
@@ -71,6 +73,41 @@ export function aggregateSolverLoads(jobs: Array<{ name: string; state: string; 
   const other = counts.get("Other");
   if (other) loads.push({ solver: "Other", ...other });
   return loads;
+}
+
+const EMPTY_CAPACITY: Capacity = {
+  allocated: 0,
+  available: 0,
+  reserved: null,
+  unavailable: 0,
+  total: 0,
+};
+
+function mapOverviewSolverLoads(loads: SolverLoad[]) {
+  return loads.map((load) => ({
+    solver: load.solver,
+    runningJobs: load.runningJobs,
+    runningResources: load.runningSlots,
+    pendingJobs: load.queuedJobs,
+    pendingResources: load.queuedSlots,
+  }));
+}
+
+export function capacityFromSlots(
+  allocated: number,
+  available: number,
+  total: number,
+  reserved: number | null = null,
+): Capacity {
+  const values = [allocated, available, total, reserved].filter((value): value is number => value !== null);
+  if (values.some((value) => !Number.isInteger(value) || value < 0)) {
+    throw new Error("Invalid capacity values");
+  }
+
+  const unavailable = total - allocated - available - (reserved ?? 0);
+  if (unavailable < 0) throw new Error("Capacity values exceed total");
+
+  return { allocated, available, reserved, unavailable, total };
 }
 
 function mapNode(node: typeof nodesCurrent.$inferSelect): NodeRecord {
@@ -127,7 +164,7 @@ export async function getDashboardSummary(owner: string): Promise<ClusterSummary
     db
       .select()
       .from(clusterSnapshots)
-      .orderBy(desc(clusterSnapshots.recordedAt))
+      .orderBy(desc(clusterSnapshots.recordedAt), desc(clusterSnapshots.id))
       .limit(1),
     db
       .select()
@@ -137,7 +174,7 @@ export async function getDashboardSummary(owner: string): Promise<ClusterSummary
 
   if (!latest) {
     return {
-      updatedAt: new Date(0).toISOString(),
+      updatedAt: null,
       totalSlots: 0,
       usedSlots: 0,
       freeSlots: 0,
@@ -200,6 +237,77 @@ export async function getActiveJobs(owner: string) {
   return rows.map(mapCurrentJob);
 }
 
+export async function getDashboardOverview(): Promise<DashboardOverview> {
+  return db.transaction(async (tx) => {
+    const [latest] = await tx
+      .select()
+      .from(clusterSnapshots)
+      .orderBy(desc(clusterSnapshots.recordedAt), desc(clusterSnapshots.id))
+      .limit(1);
+    const queues = await tx.select().from(queuesCurrent).orderBy(queuesCurrent.queueName);
+    const jobs = await tx.select().from(jobsCurrent);
+    const solverLoads = aggregateSolverLoads(
+      jobs.map((job) => ({ name: job.name, state: job.stateGroup, slots: job.slots })),
+    );
+
+    if (!latest) {
+      return {
+        snapshotId: null,
+        snapshotAt: null,
+        scheduler: "sge",
+        resourceUnit: "scheduler-slot",
+        sourceStatus: "no-data",
+        capacity: { ...EMPTY_CAPACITY },
+        jobs: {
+          running: 0,
+          pending: 0,
+          held: 0,
+          activeErrors: 0,
+          pendingResources: 0,
+          oldestPendingAt: null,
+        },
+        unavailableNodeCount: 0,
+        queues: [],
+        solverLoads: mapOverviewSolverLoads(solverLoads),
+      };
+    }
+
+    const queued = jobs.filter((job) => job.stateGroup === "queued");
+    const queuedWithSubmission = queued.filter((job) => job.submittedAt !== null);
+    const oldestPendingAt = queuedWithSubmission.length
+      ? queuedWithSubmission
+          .map((job) => job.submittedAt as Date)
+          .reduce((oldest, value) => (value < oldest ? value : oldest))
+          .toISOString()
+      : null;
+
+    return {
+      snapshotId: latest.id,
+      snapshotAt: latest.recordedAt.toISOString(),
+      scheduler: "sge",
+      resourceUnit: "scheduler-slot",
+      sourceStatus: latest.healthStatus,
+      capacity: capacityFromSlots(latest.usedSlots, latest.freeSlots, latest.totalSlots, latest.reservedSlots),
+      jobs: {
+        running: jobs.filter((job) => job.stateGroup === "running").length,
+        pending: queued.length,
+        held: jobs.filter((job) => job.stateGroup === "hold").length,
+        activeErrors: jobs.filter((job) => job.stateGroup === "error").length,
+        pendingResources: queued.reduce((sum, job) => sum + job.slots, 0),
+        oldestPendingAt,
+      },
+      unavailableNodeCount: latest.offlineNodeCount,
+      queues: queues.map((queue) => ({
+        name: queue.queueName,
+        kind: "queue" as const,
+        state: queue.state,
+        ...capacityFromSlots(queue.usedSlots, queue.freeSlots, queue.totalSlots, queue.reservedSlots),
+      })),
+      solverLoads: mapOverviewSolverLoads(solverLoads),
+    };
+  });
+}
+
 export async function getDashboardOperations(): Promise<DashboardOperations> {
   const [queues, jobs] = await Promise.all([
     db.select().from(queuesCurrent).orderBy(queuesCurrent.queueName),
@@ -207,9 +315,10 @@ export async function getDashboardOperations(): Promise<DashboardOperations> {
   ]);
 
   const queued = jobs.filter((job) => job.stateGroup === "queued");
-  const oldestQueuedAt = queued.length
-    ? queued
-        .map((job) => job.submittedAt)
+  const queuedWithSubmission = queued.filter((job) => job.submittedAt !== null);
+  const oldestQueuedAt = queuedWithSubmission.length
+    ? queuedWithSubmission
+        .map((job) => job.submittedAt as Date)
         .reduce((oldest, value) => (value < oldest ? value : oldest))
         .toISOString()
     : null;

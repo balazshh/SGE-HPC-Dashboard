@@ -24,6 +24,7 @@ load_collector_env() {
   export HPC_TZ="${HPC_TZ:-Europe/Budapest}"
   export QSTAT_CLUSTER_COMMAND="${QSTAT_CLUSTER_COMMAND:-qstat -g c}"
   export QSTAT_JOBS_COMMAND="${QSTAT_JOBS_COMMAND:-qstat -u '*'}"
+  export SGE_QUEUE_TOTALS_NON_OVERLAPPING="${SGE_QUEUE_TOTALS_NON_OVERLAPPING:-false}"
   export QACCT_COMMAND="${QACCT_COMMAND:-qacct}"
 }
 

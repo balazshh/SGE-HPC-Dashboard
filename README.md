@@ -56,6 +56,15 @@ SOURCE drizzle/0000_initial.sql;
 
 Keep these database names aligned with `.env` and `scripts/hpc/collector.env`.
 
+For an existing installation, back up the database and apply every numbered migration in filename order before restarting the collector or web app:
+
+```sql
+USE hpc_dashboard_test_db;
+SOURCE drizzle/0001_dashboard_overview.sql;
+```
+
+Run the same migration separately against the optional `DB2_*` database. The migration is safe to re-run on MySQL 8.
+
 ### Build and run
 
 ```bash
@@ -117,6 +126,8 @@ cp scripts/hpc/collector.env.example scripts/hpc/collector.env
 
 Set `DB2_*` in `collector.env` to write every collector run to a second database, such as a test web VM. A failure on either target is logged without blocking the other target, and the run exits non-zero if either target failed. The cron entries remain unchanged.
 
+If `qstat -g c` returns more than one cluster queue, set `SGE_QUEUE_TOTALS_NON_OVERLAPPING=true` only after verifying that those queue instances do not share hosts. The collector fails closed by default instead of publishing a potentially double-counted cluster total.
+
 Install only these cron jobs:
 
 ```cron
@@ -125,7 +136,7 @@ Install only these cron jobs:
 30 2 * * * cd /opt/hpc-dashboard && ./scripts/hpc/cleanup-old-data.sh >> /var/log/hpc-dashboard-cleanup.log 2>&1
 ```
 
-The dashboard's utilization and active-job charts fill from live snapshots over the next 24 hours after deployment. Cleanup retains two days of snapshots.
+The dashboard's live capacity and active-job values fill from live snapshots after deployment. Cleanup retains two days of snapshots.
 
 History charts group the indexed `jobs_history` table directly; there is no rollup job.
 
@@ -139,7 +150,7 @@ docker rm -f hpc-dashboard 2>/dev/null || true
 docker run -d --name hpc-dashboard --env-file .env -p 127.0.0.1:3001:3001 --restart unless-stopped hpc-dashboard
 ```
 
-Apply each numbered SQL migration exactly once, in filename order.
+Apply every numbered SQL migration in filename order before restarting the web app or collectors. The dashboard overview requires `drizzle/0001_dashboard_overview.sql` on databases created from an older schema.
 
 ## Troubleshooting
 
@@ -150,5 +161,5 @@ nginx -t
 ```
 
 - Login failure: check `APP_BASE_URL`, `BETTER_AUTH_SECRET`, and all `ENTRA_*` values.
-- Empty/stale pages: run the collectors manually and check their MySQL access.
+- Empty/stale pages: run the collectors manually and check their MySQL access. The overview API is `/api/dashboard/overview` and uses `Cache-Control: no-store`.
 - Collector failure after upgrade: confirm all numbered migrations and the matching collector scripts were deployed together.

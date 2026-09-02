@@ -5,6 +5,7 @@ import {
   getActiveJobs,
   getClusterHistory,
   getDashboardOperations,
+  getDashboardOverview,
   getDashboardSummary,
   getHistory,
   getJobHistory,
@@ -16,10 +17,10 @@ const jobStates = ["all", "queued", "running", "hold", "suspended", "error", "fi
 const jobPresets = ["7d", "30d", "1y"];
 const historyPresets = ["24h", "7d", "30d", "1y"];
 
-function json(data: unknown, status = 200) {
+function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...extraHeaders },
   });
 }
 
@@ -63,8 +64,12 @@ Bun.serve({
       return json({ ok: true });
     }
 
+    if (url.pathname === "/api/dashboard/overview") {
+      return withUser(request, async () => json(await getDashboardOverview(), 200, { "cache-control": "no-store" }));
+    }
+
     if (url.pathname === "/api/dashboard/summary") {
-      return withUser(request, async (hpcUsername) => json(await getDashboardSummary(hpcUsername)));
+      return withUser(request, async (hpcUsername) => json(await getDashboardSummary(hpcUsername), 200, { "cache-control": "no-store" }));
     }
 
     if (url.pathname === "/api/dashboard/history") {
@@ -72,7 +77,7 @@ Bun.serve({
     }
 
     if (url.pathname === "/api/dashboard/operations") {
-      return withUser(request, async () => json(await getDashboardOperations()));
+      return withUser(request, async () => json(await getDashboardOperations(), 200, { "cache-control": "no-store" }));
     }
 
     if (url.pathname === "/api/nodes") {

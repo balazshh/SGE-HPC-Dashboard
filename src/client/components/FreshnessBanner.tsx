@@ -1,19 +1,35 @@
+import type { OverviewSourceStatus } from "../../shared/types/hpc";
 import { getFreshnessLevel } from "../lib/freshness";
 import { formatBudapestDateTime } from "../lib/format";
 import { useUi } from "../lib/ui";
 
 interface FreshnessBannerProps {
-  updatedAt: string;
+  updatedAt: string | null;
+  sourceStatus?: OverviewSourceStatus;
+  refreshing?: boolean;
 }
 
-export function FreshnessBanner({ updatedAt }: FreshnessBannerProps) {
-  const level = getFreshnessLevel(updatedAt);
-  const { freshnessLabel, t } = useUi();
-
-  const label = freshnessLabel(level);
-  const time = formatBudapestDateTime(updatedAt);
-
-  const description = t("freshnessBanner", { label, time });
+export function FreshnessBanner({ updatedAt, sourceStatus, refreshing = false }: FreshnessBannerProps) {
+  const { freshnessLabel, statusLabel, t } = useUi();
+  const timestampLevel = updatedAt ? getFreshnessLevel(updatedAt) : "broken";
+  const level = sourceStatus === "down" || sourceStatus === "no-data"
+    ? "broken"
+    : sourceStatus === "degraded" && timestampLevel === "fresh"
+      ? "warn"
+      : timestampLevel;
+  const label = refreshing
+    ? t("refreshing")
+    : sourceStatus === "no-data"
+      ? t("noSnapshot")
+      : sourceStatus === "down"
+        ? statusLabel(sourceStatus)
+        : sourceStatus === "degraded" && timestampLevel === "fresh"
+          ? statusLabel(sourceStatus)
+          : freshnessLabel(level);
+  const time = updatedAt ? formatBudapestDateTime(updatedAt) : t("noSnapshot");
+  const description = updatedAt
+    ? t("freshnessBanner", { label, time })
+    : t("noDataSource");
 
   return (
     <span
@@ -23,7 +39,9 @@ export function FreshnessBanner({ updatedAt }: FreshnessBannerProps) {
       title={description}
     >
       <span className="freshness__signal" aria-hidden="true" />
-      <span className="freshness__label">{time}</span>
+      <span className="freshness__label">{label}</span>
+      <span aria-hidden="true">·</span>
+      <span>{time}</span>
     </span>
   );
 }

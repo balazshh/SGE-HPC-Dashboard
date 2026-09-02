@@ -32,7 +32,7 @@ function historyBucketFormatter(preset: HistoryPreset, language: Language) {
   return formatter;
 }
 
-export function formatBudapestDateTime(value?: string) {
+export function formatBudapestDateTime(value?: string | null) {
   if (!value) return "—";
 
   const date = new Date(value);

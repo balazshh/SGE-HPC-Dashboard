@@ -71,7 +71,7 @@ function usePathname() {
 }
 
 function HeaderFreshness() {
-  const summary = useApi<ClusterSummary>("/api/dashboard/summary");
+  const summary = useApi<ClusterSummary>("/api/dashboard/summary", { refreshMs: 60_000 });
   return summary.data ? <FreshnessBanner updatedAt={summary.data.updatedAt} /> : null;
 }
 
@@ -96,7 +96,7 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
             <div className="site-header__left">
               <BoschLogo />
               <span className="site-header__product">SGE HPC</span>
-              {showNavigation && <HeaderFreshness />}
+              {showNavigation && pathname !== "/" && <HeaderFreshness />}
             </div>
             <UserMenu />
           </div>

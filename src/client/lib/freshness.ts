@@ -8,6 +8,8 @@ export const FRESHNESS_THRESHOLDS = {
 
 export function getFreshnessLevel(updatedAt: string, now = new Date()): FreshnessLevel {
   const updated = new Date(updatedAt);
+  if (Number.isNaN(updated.getTime()) || updated.getTime() > now.getTime()) return "broken";
+
   const diffMinutes = (now.getTime() - updated.getTime()) / 60000;
 
   if (diffMinutes >= FRESHNESS_THRESHOLDS.brokenMinutes) return "broken";

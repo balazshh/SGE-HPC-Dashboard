@@ -11,9 +11,12 @@ export type CanonicalJobState =
 
 export type FreshnessLevel = "fresh" | "warn" | "stale" | "broken";
 export type HistoryPreset = "24h" | "7d" | "30d" | "1y";
+export type Scheduler = "sge" | "slurm";
+export type ResourceUnit = "scheduler-slot" | "cpu";
+export type OverviewSourceStatus = "healthy" | "degraded" | "down" | "no-data";
 
 export interface ClusterSummary {
-  updatedAt: string;
+  updatedAt: string | null;
   totalSlots: number;
   usedSlots: number;
   freeSlots: number;
@@ -30,6 +33,20 @@ export interface ClusterHistoryPoint {
   recordedAt: string;
   utilizationPercent: number;
   jobCount: number;
+}
+
+export interface Capacity {
+  allocated: number;
+  available: number;
+  reserved: number | null;
+  unavailable: number;
+  total: number;
+}
+
+export interface DashboardQueue extends Capacity {
+  name: string;
+  kind: "queue" | "partition";
+  state: string | null;
 }
 
 export interface NodeRecord {
@@ -50,7 +67,7 @@ export interface JobRecord {
   jobId: string;
   name: string;
   state: CanonicalJobState;
-  submittedAt: string;
+  submittedAt: string | null;
   startedAt?: string;
   finishedAt?: string;
   // jobs_history has no slot data, so history rows omit this field.
@@ -60,7 +77,7 @@ export interface JobRecord {
 export interface QueueCapacityRow {
   queueName: string;
   usedSlots: number;
-  reservedSlots: number;
+  reservedSlots: number | null;
   freeSlots: number;
   totalSlots: number;
 }
@@ -83,6 +100,32 @@ export interface DashboardOperations {
   queues: QueueCapacityRow[];
   queuePressure: QueuePressure;
   solverLoads: SolverLoad[];
+}
+
+export interface DashboardOverview {
+  snapshotId: number | null;
+  snapshotAt: string | null;
+  scheduler: Scheduler;
+  resourceUnit: ResourceUnit;
+  sourceStatus: OverviewSourceStatus;
+  capacity: Capacity;
+  jobs: {
+    running: number;
+    pending: number;
+    held: number;
+    activeErrors: number;
+    pendingResources: number;
+    oldestPendingAt: string | null;
+  };
+  unavailableNodeCount: number;
+  queues: DashboardQueue[];
+  solverLoads: Array<{
+    solver: string;
+    runningJobs: number;
+    runningResources: number;
+    pendingJobs: number;
+    pendingResources: number;
+  }>;
 }
 
 export interface JobsFilterInput {
