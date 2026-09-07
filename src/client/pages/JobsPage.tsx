@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { CanonicalJobState, JobRecord, PaginatedJobs } from "../../shared/types/hpc";
 import { StatusPill } from "../components/StatusPill";
 import { useApi } from "../lib/api";
-import { formatDateTime } from "../lib/format";
+import { formatDateTime, formatNumber } from "../lib/format";
 import { useUi } from "../lib/ui";
 
 const PAGE_SIZE = 5;
@@ -12,13 +12,16 @@ const PRESETS = ["7d", "30d", "1y"] as const;
 
 export function JobsPage() {
   const [query, setQuery] = useState("");
+  const [queue, setQueue] = useState("");
   const [state, setState] = useState<(typeof ALL_STATES)[number]>("all");
   const [preset, setPreset] = useState<(typeof PRESETS)[number]>("30d");
   const [page, setPage] = useState(1);
+  const [selectedJob, setSelectedJob] = useState<JobRecord | null>(null);
   const { language, statusLabel, t } = useUi();
 
   const historyPath = `/api/jobs/history?${new URLSearchParams({
     query,
+    queue,
     state,
     preset,
     page: String(page),
@@ -37,6 +40,10 @@ export function JobsPage() {
   }
 
   const historyData = history.data;
+  const normalizedQueue = queue.trim().toLowerCase();
+  const visibleActiveJobs = normalizedQueue
+    ? activeJobs.data.filter((job) => job.queueName?.toLowerCase().includes(normalizedQueue))
+    : activeJobs.data;
 
   return (
     <main className="page">
@@ -44,10 +51,10 @@ export function JobsPage() {
         <div className="section-title-row">
           <div>
             <h2>{t("activeJobs")}</h2>
-            <p className="muted">{t("activeJobsCount", { count: activeJobs.data.length })}</p>
+            <p className="muted">{t("activeJobsCount", { count: visibleActiveJobs.length })}</p>
           </div>
         </div>
-        {activeJobs.data.length ? (
+        {visibleActiveJobs.length ? (
           <div className="table-wrap">
             <table>
               <caption className="sr-only">{t("currentSchedulerView")}</caption>
@@ -61,9 +68,9 @@ export function JobsPage() {
                 </tr>
               </thead>
               <tbody>
-                {activeJobs.data.map((job) => (
+                {visibleActiveJobs.map((job) => (
                   <tr key={job.jobId}>
-                    <td>{job.jobId}</td>
+                    <td><button className="table-link" type="button" onClick={() => setSelectedJob(job)}>{job.jobId}</button></td>
                     <td>{job.name}</td>
                     <td><StatusPill value={job.state} /></td>
                     <td>{formatDateTime(job.submittedAt, language)}</td>
@@ -74,7 +81,7 @@ export function JobsPage() {
             </table>
           </div>
         ) : (
-          <p className="muted">{t("noActiveJobsOnCluster")}</p>
+          <p className="muted">{normalizedQueue ? t("noJobsMatched") : t("noActiveJobsOnCluster")}</p>
         )}
       </section>
 
@@ -95,6 +102,19 @@ export function JobsPage() {
                   setPage(1);
                 }}
                 placeholder={t("searchPlaceholder")}
+              />
+            </label>
+            <label>
+              <span>{t("queueName")}</span>
+              <input
+                className="form-input"
+                type="search"
+                value={queue}
+                onChange={(event) => {
+                  setQueue(event.target.value);
+                  setPage(1);
+                }}
+                placeholder={t("queueName")}
               />
             </label>
             <label>
@@ -151,7 +171,7 @@ export function JobsPage() {
               <tbody>
                 {historyData.items.map((job) => (
                   <tr key={job.jobId}>
-                    <td>{job.jobId}</td>
+                    <td><button className="table-link" type="button" onClick={() => setSelectedJob(job)}>{job.jobId}</button></td>
                     <td>{job.name}</td>
                     <td><StatusPill value={job.state} /></td>
                     <td>{formatDateTime(job.submittedAt, language)}</td>
@@ -175,6 +195,28 @@ export function JobsPage() {
           </div>
         </div>
       </section>
+
+      {selectedJob && (
+        <section className="surface job-details" role="dialog" aria-modal="true" aria-labelledby="job-details-title">
+          <div className="section-title-row">
+            <div>
+              <h2 id="job-details-title">{t("jobDetails")}</h2>
+              <p className="muted">{selectedJob.jobId} · {selectedJob.name}</p>
+            </div>
+            <button className="btn btn-secondary" type="button" onClick={() => setSelectedJob(null)}>{t("close")}</button>
+          </div>
+          <dl className="job-details__grid">
+            <div><dt>{t("state")}</dt><dd><StatusPill value={selectedJob.state} /></dd></div>
+            <div><dt>{t("queueName")}</dt><dd>{selectedJob.queueName ?? t("notAvailable")}</dd></div>
+            <div><dt>{t("pendingReason")}</dt><dd>{selectedJob.reason ?? t("notAvailable")}</dd></div>
+            <div><dt>{t("nodeList")}</dt><dd>{selectedJob.nodeList ?? t("notAvailable")}</dd></div>
+            <div><dt>{t("pendingResources")}</dt><dd>{selectedJob.slots === undefined ? t("notAvailable") : formatNumber(selectedJob.slots, language)}</dd></div>
+            <div><dt>{t("submittedAt")}</dt><dd>{formatDateTime(selectedJob.submittedAt, language)}</dd></div>
+            <div><dt>{t("startedAt")}</dt><dd>{formatDateTime(selectedJob.startedAt, language)}</dd></div>
+            {selectedJob.finishedAt && <div><dt>{t("finishedAt")}</dt><dd>{formatDateTime(selectedJob.finishedAt, language)}</dd></div>}
+          </dl>
+        </section>
+      )}
     </main>
   );
 }

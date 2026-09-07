@@ -1010,6 +1010,22 @@ label {
   border-radius: var(--radius-control);
 }
 
+.table-link {
+  padding: 0;
+  color: var(--bosch-blue);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.table-link:hover {
+  color: var(--color-text);
+}
+
 table {
   width: 100%;
   min-width: 760px;
@@ -1087,6 +1103,42 @@ tbody tr:hover {
 :root[data-theme="dark"] .status-pill--deleted,
 :root[data-theme="dark"] .status-pill--missing {
   --status-color: #f2f2f2;
+}
+
+.job-details {
+  display: grid;
+  gap: calc(var(--space-unit) * 3);
+  padding: calc(var(--space-unit) * 4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-surface);
+}
+
+.job-details__grid {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: calc(var(--space-unit) * 2);
+}
+
+.job-details__grid > div {
+  min-width: 0;
+  display: grid;
+  gap: var(--space-unit);
+  padding: calc(var(--space-unit) * 2);
+  background: var(--color-background-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.job-details__grid dt {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: var(--font-weight-bold);
+}
+
+.job-details__grid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .pagination-row,
@@ -1268,6 +1320,10 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 
+  .job-details__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .preset-group div {
     width: 100%;
     overflow-x: auto;
@@ -1294,6 +1350,10 @@ tbody tr:hover {
 
   .metric-grid--dashboard .metric-card--featured {
     grid-column: auto;
+  }
+
+  .job-details__grid {
+    grid-template-columns: 1fr;
   }
 
   .metric-card.surface,

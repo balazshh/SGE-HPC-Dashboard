@@ -70,6 +70,9 @@ export interface JobRecord {
   submittedAt: string | null;
   startedAt?: string;
   finishedAt?: string;
+  queueName?: string | null;
+  reason?: string | null;
+  nodeList?: string | null;
   // jobs_history has no slot data, so history rows omit this field.
   slots?: number;
 }
@@ -130,6 +133,7 @@ export interface DashboardOverview {
 
 export interface JobsFilterInput {
   query?: string;
+  queue?: string;
   state?: CanonicalJobState | "all";
   preset?: Exclude<HistoryPreset, "24h">;
   page?: number;

@@ -91,11 +91,15 @@ CREATE TABLE jobs_current (
   owner varchar(255) NOT NULL,
   name varchar(255) NOT NULL,
   state_group enum('queued','running','hold','suspended','error','finished','deleted') NOT NULL,
+  queue_name varchar(255) NULL,
+  reason varchar(255) NULL,
+  node_list varchar(2048) NULL,
   submitted_at datetime NULL,
   started_at datetime NULL,
   slots int NOT NULL DEFAULT 1,
   UNIQUE KEY jobs_current_job_id_unique (job_id),
   KEY jobs_current_owner_idx (owner),
+  KEY jobs_current_queue_name_idx (queue_name),
   KEY jobs_current_state_group_idx (state_group)
 );
 
@@ -117,9 +121,13 @@ CREATE TABLE jobs_history (
   owner varchar(255) NOT NULL,
   name varchar(255) NOT NULL,
   state_final enum('queued','running','hold','suspended','error','finished','deleted') NOT NULL,
+  queue_name varchar(255) NULL,
+  reason varchar(255) NULL,
+  node_list varchar(2048) NULL,
   submitted_at datetime NOT NULL,
   started_at datetime NULL,
   finished_at datetime NOT NULL,
   UNIQUE KEY jobs_history_job_id_finished_unique (job_id, finished_at),
-  KEY jobs_history_owner_finished_idx (owner, finished_at)
+  KEY jobs_history_owner_finished_idx (owner, finished_at),
+  KEY jobs_history_queue_name_idx (queue_name)
 );

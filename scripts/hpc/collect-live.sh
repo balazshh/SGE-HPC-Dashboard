@@ -119,6 +119,13 @@ NF && $1 != "job-ID" && $1 !~ /^-+$/ {
   submitted_at = (state == "running" || state == "suspended") ? "" : scheduler_at;
   started_at = (state == "running" || state == "suspended") ? scheduler_at : "";
   slots = parse_slots();
+  queue_name = "";
+  node_list = "";
+  if ($8 ~ /^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+$/) {
+    split($8, queue_parts, "@");
+    queue_name = queue_parts[1];
+    node_list = queue_parts[2];
+  }
   if (slots == "") {
     print "invalid SGE slots for job " job_id > "/dev/stderr";
     exit 1;
@@ -129,7 +136,7 @@ NF && $1 != "job-ID" && $1 !~ /^-+$/ {
   else if (state == "error") failed++;
   else if (state == "hold") hold++;
 
-  print job_id, owner, name, state, submitted_at, started_at, slots;
+  print job_id, owner, name, state, submitted_at, started_at, slots, queue_name, "", node_list;
 }
 END {
   printf("running_jobs=%d\nqueued_jobs=%d\nfailed_jobs=%d\nhold_jobs=%d\ntotal_jobs=%d\n", running, queued, failed, hold, total_jobs) > summary_env;
@@ -192,14 +199,17 @@ function quote(value) {
 }
 BEGIN {
   sq = sprintf("%c", 39);
-  prefix = "INSERT INTO jobs_current (job_id, owner, name, state_group, submitted_at, started_at, slots) VALUES\n";
+  prefix = "INSERT INTO jobs_current (job_id, owner, name, state_group, queue_name, reason, node_list, submitted_at, started_at, slots) VALUES\n";
   batch_size = 500;
   count = 0;
 }
 NF {
   submitted_at = $5 == "" ? "NULL" : quote($5);
   started_at = $6 == "" ? "NULL" : quote($6);
-  row = "  (" quote($1) ", " quote($2) ", " quote($3) ", " quote($4) ", " submitted_at ", " started_at ", " ($7 + 0) ")";
+  queue_name = $8 == "" ? "NULL" : quote($8);
+  reason = $9 == "" ? "NULL" : quote($9);
+  node_list = $10 == "" ? "NULL" : quote($10);
+  row = "  (" quote($1) ", " quote($2) ", " quote($3) ", " quote($4) ", " queue_name ", " reason ", " node_list ", " submitted_at ", " started_at ", " ($7 + 0) ")";
   if (count == 0) {
     printf "%s%s", prefix, row;
   } else {

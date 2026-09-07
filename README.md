@@ -117,7 +117,7 @@ cp scripts/hpc/collector.env.example scripts/hpc/collector.env
 ./scripts/hpc/cleanup-old-data.sh
 ```
 
-Set `DB2_*` in `collector.env` to write every collector run to a second database, such as a test web VM. A failure on either target is logged without blocking the other target, and the run exits non-zero if either target failed. The cron entries remain unchanged.
+Set `DB2_*` in `collector.env` to write every collector run to a second database, such as a test web VM. A failure on either target is logged without blocking the other target, and the run exits non-zero if either target failed. The live collector also stores the SGE queue and host for each job when qstat provides `queue@host`. The cron entries remain unchanged.
 
 If `qstat -g c` returns more than one cluster queue, set `SGE_QUEUE_TOTALS_NON_OVERLAPPING=true` only after verifying that those queue instances do not share hosts. The collector fails closed by default instead of publishing a potentially double-counted cluster total.
 
@@ -137,13 +137,14 @@ History charts group the indexed `jobs_history` table directly; there is no roll
 
 ```bash
 git pull
+# Existing databases: apply drizzle/0001_job_metadata.sql once before restarting.
 # Apply every new numbered SQL migration now, before restarting the app or collectors.
 docker build --network=host -t hpc-dashboard -f Containerfile .
 docker rm -f hpc-dashboard 2>/dev/null || true
 docker run -d --name hpc-dashboard --env-file .env -p 127.0.0.1:3001:3001 --restart unless-stopped hpc-dashboard
 ```
 
-The schema is consolidated in `drizzle/0000_initial.sql`; apply it before starting the web app or collectors on a fresh deployment.
+The schema is consolidated in `drizzle/0000_initial.sql` for fresh deployments. Existing databases are never changed automatically by the collectors; back them up and apply `drizzle/0001_job_metadata.sql` before restarting the web app or collectors.
 
 ## Troubleshooting
 

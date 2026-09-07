@@ -94,6 +94,7 @@ Bun.serve({
         const preset = url.searchParams.get("preset");
         const input: JobsFilterInput = {
           query: url.searchParams.get("query")?.trim() || undefined,
+          queue: url.searchParams.get("queue")?.trim() || undefined,
           state: state && jobStates.includes(state) ? state as JobsFilterInput["state"] : undefined,
           preset: preset && jobPresets.includes(preset) ? preset as JobsFilterInput["preset"] : undefined,
           page: readInt(url.searchParams.get("page"), 1, 1, Number.MAX_SAFE_INTEGER),

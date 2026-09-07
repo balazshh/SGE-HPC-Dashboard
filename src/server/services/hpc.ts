@@ -30,6 +30,9 @@ function mapCurrentJob(job: typeof jobsCurrent.$inferSelect): JobRecord {
     state: job.stateGroup,
     submittedAt: job.submittedAt?.toISOString() ?? null,
     startedAt: job.startedAt?.toISOString(),
+    queueName: job.queueName,
+    reason: job.reason,
+    nodeList: job.nodeList,
     slots: job.slots,
   };
 }
@@ -134,6 +137,9 @@ function mapHistoryJob(job: typeof jobsHistory.$inferSelect): JobRecord {
     submittedAt: job.submittedAt.toISOString(),
     startedAt: job.startedAt?.toISOString(),
     finishedAt: job.finishedAt.toISOString(),
+    queueName: job.queueName,
+    reason: job.reason,
+    nodeList: job.nodeList,
   };
 }
 
@@ -156,7 +162,10 @@ export function historyCutoff(preset: HistoryPreset, now = Date.now()) {
 function matchesQuery(job: JobRecord, query?: string) {
   if (!query) return true;
   const normalized = query.trim().toLowerCase();
-  return job.jobId.includes(normalized) || job.name.toLowerCase().includes(normalized);
+  return job.jobId.includes(normalized)
+    || job.name.toLowerCase().includes(normalized)
+    || job.queueName?.toLowerCase().includes(normalized)
+    || job.reason?.toLowerCase().includes(normalized);
 }
 
 export async function getDashboardSummary(owner: string): Promise<ClusterSummary> {
@@ -357,8 +366,11 @@ export async function getJobHistory(owner: string, input: JobsFilterInput = {}):
 
   const items = rows.map(mapHistoryJob);
 
+  const queue = input.queue?.trim().toLowerCase();
   const filtered = items.filter((job) =>
-    (state === "all" || job.state === state) && matchesQuery(job, input.query)
+    (state === "all" || job.state === state)
+    && (!queue || job.queueName?.toLowerCase().includes(queue))
+    && matchesQuery(job, input.query)
   );
 
   const total = filtered.length;

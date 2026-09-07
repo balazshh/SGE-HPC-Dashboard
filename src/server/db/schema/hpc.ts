@@ -65,6 +65,9 @@ export const jobsCurrent = mysqlTable(
     owner: varchar("owner", { length: 255 }).notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     stateGroup: mysqlEnum("state_group", jobStates).notNull(),
+    queueName: varchar("queue_name", { length: 255 }),
+    reason: varchar("reason", { length: 255 }),
+    nodeList: varchar("node_list", { length: 2048 }),
     submittedAt: datetime("submitted_at", { mode: "date" }),
     startedAt: datetime("started_at", { mode: "date" }),
     slots: int("slots").notNull().default(1),
@@ -72,6 +75,7 @@ export const jobsCurrent = mysqlTable(
   (table) => ({
     jobIdUnique: uniqueIndex("jobs_current_job_id_unique").on(table.jobId),
     ownerIdx: index("jobs_current_owner_idx").on(table.owner),
+    queueIdx: index("jobs_current_queue_name_idx").on(table.queueName),
     stateIdx: index("jobs_current_state_group_idx").on(table.stateGroup),
   }),
 );
@@ -101,12 +105,16 @@ export const jobsHistory = mysqlTable(
     owner: varchar("owner", { length: 255 }).notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     stateFinal: mysqlEnum("state_final", jobStates).notNull(),
+    queueName: varchar("queue_name", { length: 255 }),
+    reason: varchar("reason", { length: 255 }),
+    nodeList: varchar("node_list", { length: 2048 }),
     submittedAt: datetime("submitted_at", { mode: "date" }).notNull(),
     startedAt: datetime("started_at", { mode: "date" }),
     finishedAt: datetime("finished_at", { mode: "date" }).notNull(),
   },
   (table) => ({
     ownerFinishedIdx: index("jobs_history_owner_finished_idx").on(table.owner, table.finishedAt),
+    queueIdx: index("jobs_history_queue_name_idx").on(table.queueName),
     jobIdFinishedUnique: uniqueIndex("jobs_history_job_id_finished_unique").on(table.jobId, table.finishedAt),
   }),
 );
