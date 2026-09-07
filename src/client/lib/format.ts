@@ -7,13 +7,6 @@ const dateLocales: Record<Language, string> = {
   hu: "hu-HU",
 };
 
-const dateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
-  dateStyle: "medium",
-  timeStyle: "short",
-});
-
-const numberFormatter = new Intl.NumberFormat("en-US");
-
 const historyBucketFormatters = new Map<string, Intl.DateTimeFormat>();
 
 function historyBucketFormatter(preset: HistoryPreset, language: Language) {
@@ -32,13 +25,27 @@ function historyBucketFormatter(preset: HistoryPreset, language: Language) {
   return formatter;
 }
 
-export function formatBudapestDateTime(value?: string | null) {
+export function formatDateTime(value?: string | null, language: Language = "en") {
   if (!value) return "—";
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
 
-  return dateTimeFormatter.format(date);
+  return new Intl.DateTimeFormat(dateLocales[language], {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+export function formatCompactDateTime(value?: string | null, language: Language = "en") {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return new Intl.DateTimeFormat(dateLocales[language], {
+    timeStyle: "short",
+  }).format(date);
 }
 
 export function formatHistoryBucketLabel(value: string, preset: HistoryPreset, language: Language) {
@@ -48,11 +55,11 @@ export function formatHistoryBucketLabel(value: string, preset: HistoryPreset, l
   return historyBucketFormatter(preset, language).format(date);
 }
 
-export function formatNumber(value: number) {
-  return numberFormatter.format(value);
+export function formatNumber(value: number, language: Language = "en") {
+  return new Intl.NumberFormat(dateLocales[language]).format(value);
 }
 
-export function formatMemoryGigabytes(value?: string | null) {
+export function formatMemoryGigabytes(value?: string | null, language: Language = "en") {
   if (!value) return "—";
 
   const match = value.trim().match(/^([\d.]+)\s*([KMGTPE])?$/i);
@@ -65,5 +72,5 @@ export function formatMemoryGigabytes(value?: string | null) {
   const powers = { K: -2, M: -1, G: 0, T: 1, P: 2, E: 3 } as const;
   const gigabytes = amount * 1024 ** powers[unit as keyof typeof powers];
 
-  return `${gigabytes.toFixed(2)} GB`;
+  return `${gigabytes.toLocaleString(dateLocales[language], { minimumFractionDigits: 2, maximumFractionDigits: 2 })} GB`;
 }

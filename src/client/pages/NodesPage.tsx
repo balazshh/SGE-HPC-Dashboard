@@ -12,7 +12,7 @@ function readNumber(value?: string | null) {
 
 export function NodesPage() {
   const nodes = useApi<NodeRecord[]>("/api/nodes");
-  const { t } = useUi();
+  const { language, t } = useUi();
 
   if (nodes.loading) {
     return <main className="page"><section className="surface">{t("loadingNodes")}</section></main>;
@@ -85,8 +85,8 @@ export function NodesPage() {
                       <td>{node.nthr ?? "—"}</td>
                       <td>{node.loadRaw ?? "—"}</td>
                       <td>{loadPerCpu ?? "—"}</td>
-                      <td>{formatMemoryGigabytes(node.memtotRaw)}</td>
-                      <td>{formatMemoryGigabytes(node.memuseRaw)}</td>
+                      <td>{formatMemoryGigabytes(node.memtotRaw, language)}</td>
+                      <td>{formatMemoryGigabytes(node.memuseRaw, language)}</td>
                     </tr>
                   );
                 })}

@@ -1,5 +1,7 @@
 import { forwardRef } from "react";
 
+import { useUi } from "../lib/ui";
+
 export const BoschLogoMark = forwardRef<SVGSVGElement, { className?: string }>(
   function BoschLogoMark({ className }, ref) {
     return (
@@ -23,5 +25,6 @@ export const BoschLogoMark = forwardRef<SVGSVGElement, { className?: string }>(
 );
 
 export function BoschLogo() {
-  return <a className="header-brand-logo" href="/" aria-label="Bosch home"><BoschLogoMark /></a>;
+  const { t } = useUi();
+  return <a className="header-brand-logo" href="/" aria-label={t("boschHome")}><BoschLogoMark /></a>;
 }

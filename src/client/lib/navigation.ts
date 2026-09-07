@@ -1,4 +1,5 @@
 export const CLIENT_NAVIGATION_EVENT = "client-navigation";
+export const DASHBOARD_REFRESH_EVENT = "dashboard-refresh";
 
 export function navigate(href: string, { replace = false } = {}) {
   window.history[replace ? "replaceState" : "pushState"](null, "", href);

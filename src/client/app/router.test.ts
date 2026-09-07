@@ -22,9 +22,13 @@ test("freshness is visible and page intros stay removed", () => {
 
   expect(router).toContain("<HeaderFreshness />");
   expect(freshness).toContain('<span className="freshness__label">{label}</span>');
-  expect(router).toContain('pathname !== "/" && <HeaderFreshness />');
+  expect(router).toContain('showNavigation && <HeaderFreshness />');
+  expect(router).toContain('className={`refresh-icon${summary.refreshing ? " is-refreshing" : ""}`}');
+  expect(freshness).toContain("compact?: boolean");
   expect(userMenu).toContain('<strong className="user-menu__email">{user.email}</strong>');
   expect(userMenu).not.toContain("{user.name}");
+  expect(css).toContain(".metric-grid--dashboard .metric-card--featured");
+  expect(css).toContain(".refresh-icon");
   expect(css).not.toContain("text-overflow: ellipsis");
   for (const key of ["dashboardLede", "liveNodeInventory", "nodesPageLede", "activeJobsAndHistory", "jobsPageLede", "personalHistoricalTrends", "historyPageLede"]) {
     expect(pages).not.toContain(`t("${key}")`);

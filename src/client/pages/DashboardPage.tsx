@@ -1,8 +1,11 @@
+import { useEffect } from "react";
+
 import type { Capacity, DashboardOverview } from "../../shared/types/hpc";
 import { FreshnessBanner } from "../components/FreshnessBanner";
 import { MetricCard } from "../components/MetricCard";
 import { useApi } from "../lib/api";
-import { formatBudapestDateTime, formatNumber } from "../lib/format";
+import { formatDateTime, formatNumber } from "../lib/format";
+import { DASHBOARD_REFRESH_EVENT } from "../lib/navigation";
 import { useUi } from "../lib/ui";
 
 const REFRESH_MS = 60_000;
@@ -24,7 +27,12 @@ function capacityPercent(capacity: Capacity) {
 
 export function DashboardPage() {
   const overview = useApi<DashboardOverview>("/api/dashboard/overview", { refreshMs: REFRESH_MS });
-  const { t } = useUi();
+  const { language, t } = useUi();
+
+  useEffect(() => {
+    window.addEventListener(DASHBOARD_REFRESH_EVENT, overview.refetch);
+    return () => window.removeEventListener(DASHBOARD_REFRESH_EVENT, overview.refetch);
+  }, [overview.refetch]);
 
   if (overview.loading && !overview.data) {
     return <main className="page"><section className="surface" role="status">{t("loadingDashboard")}</section></main>;
@@ -48,12 +56,6 @@ export function DashboardPage() {
     ? formatWaitAge(data.jobs.oldestPendingAt)
     : null;
   const noData = data.sourceStatus === "no-data" || data.snapshotAt === null;
-  const refreshLabel = overview.error
-    ? t("retry")
-    : overview.refreshing
-      ? t("refreshing")
-      : t("refreshDashboard");
-
   return (
     <main className="page">
       <section className="surface dashboard-status" aria-busy={overview.refreshing}>
@@ -66,14 +68,12 @@ export function DashboardPage() {
             updatedAt={data.snapshotAt}
             sourceStatus={data.sourceStatus}
             refreshing={overview.refreshing}
+            compact
           />
           {data.unavailableNodeCount > 0 && (
             <span className="muted">{t("unavailableNodeCount", { count: data.unavailableNodeCount })}</span>
           )}
         </div>
-        <button className="btn btn-secondary" type="button" onClick={overview.refetch} disabled={overview.refreshing}>
-          {refreshLabel}
-        </button>
       </section>
 
       {overview.error && (
@@ -91,22 +91,22 @@ export function DashboardPage() {
             <article className="surface metric-card metric-card--featured">
               <div>
                 <p className="metric-card__label">{t("resourceAllocated", { unit })}</p>
-                <p className="metric-card__value">{formatNumber(data.capacity.allocated)} / {formatNumber(data.capacity.total)}</p>
+                <p className="metric-card__value">{formatNumber(data.capacity.allocated, language)} / {formatNumber(data.capacity.total, language)}</p>
                 <p className="muted">{percent}% {t("resourceTotal", { unit })}</p>
               </div>
               <progress
                 className="utilization-progress"
                 max="100"
                 value={percent}
-                aria-label={`${t("resourceAllocated", { unit })}: ${formatNumber(data.capacity.allocated)} / ${formatNumber(data.capacity.total)}`}
+                aria-label={`${t("resourceAllocated", { unit })}: ${formatNumber(data.capacity.allocated, language)} / ${formatNumber(data.capacity.total, language)}`}
               >
                 {percent}%
               </progress>
             </article>
-            <MetricCard label={t("resourceAvailable", { unit })} value={formatNumber(data.capacity.available)} />
-            <MetricCard label={t("resourceUnavailable", { unit })} value={formatNumber(data.capacity.unavailable)} />
+            <MetricCard label={t("resourceAvailable", { unit })} value={formatNumber(data.capacity.available, language)} />
+            <MetricCard label={t("resourceUnavailable", { unit })} value={formatNumber(data.capacity.unavailable, language)} />
             <MetricCard label={t("runningJobs")} value={data.jobs.running} />
-            <MetricCard label={t("queuedJobs")} value={data.jobs.pending} detail={t("pendingResources") + ": " + formatNumber(data.jobs.pendingResources)} />
+            <MetricCard label={t("queuedJobs")} value={data.jobs.pending} detail={t("pendingResources") + ": " + formatNumber(data.jobs.pendingResources, language)} />
             <MetricCard label={t("jobsOnHold")} value={data.jobs.held} />
             <MetricCard label={t("activeErrors")} value={data.jobs.activeErrors} />
           </section>
@@ -117,7 +117,7 @@ export function DashboardPage() {
                 <div>
                   <h2>{t("queuePressureTitle")}</h2>
                   {oldestPendingAge && data.jobs.oldestPendingAt && (
-                    <p className="muted">{t("oldestQueuedAt")}: {oldestPendingAge} ({formatBudapestDateTime(data.jobs.oldestPendingAt)})</p>
+                    <p className="muted">{t("oldestQueuedAt")}: {oldestPendingAge} ({formatDateTime(data.jobs.oldestPendingAt, language)})</p>
                   )}
                 </div>
                 <a className="btn btn-secondary" href="/jobs">{t("openMyJobs")}</a>
@@ -125,15 +125,15 @@ export function DashboardPage() {
               <dl className="pressure-stats">
                 <div className="pressure-stat">
                   <dt>{t("queuedJobs")}</dt>
-                  <dd>{formatNumber(data.jobs.pending)}</dd>
+                  <dd>{formatNumber(data.jobs.pending, language)}</dd>
                 </div>
                 <div className="pressure-stat">
                   <dt>{t("pendingResources")}</dt>
-                  <dd>{formatNumber(data.jobs.pendingResources)}</dd>
+                  <dd>{formatNumber(data.jobs.pendingResources, language)}</dd>
                 </div>
                 <div className="pressure-stat">
                   <dt>{t("oldestQueuedAt")}</dt>
-                  <dd>{data.jobs.oldestPendingAt ? formatBudapestDateTime(data.jobs.oldestPendingAt) : "—"}</dd>
+                  <dd>{data.jobs.oldestPendingAt ? formatDateTime(data.jobs.oldestPendingAt, language) : "—"}</dd>
                 </div>
               </dl>
               {data.jobs.pending === 0 && <p className="muted">{t("noPendingJobs")}</p>}
@@ -169,17 +169,17 @@ export function DashboardPage() {
                                 className="queue-capacity__progress"
                                 max="100"
                                 value={queuePercent}
-                                aria-label={`${queue.name}: ${formatNumber(queue.allocated)} / ${formatNumber(queue.total)}`}
+                                aria-label={`${queue.name}: ${formatNumber(queue.allocated, language)} / ${formatNumber(queue.total, language)}`}
                               >
                                 {queuePercent}%
                               </progress>
                             </th>
                             <td>{queue.state ?? "—"}</td>
-                            <td>{formatNumber(queue.allocated)}</td>
-                            <td>{formatNumber(queue.available)}</td>
-                            <td>{queue.reserved === null ? "—" : formatNumber(queue.reserved)}</td>
-                            <td>{formatNumber(queue.unavailable)}</td>
-                            <td>{formatNumber(queue.total)}</td>
+                            <td>{formatNumber(queue.allocated, language)}</td>
+                            <td>{formatNumber(queue.available, language)}</td>
+                            <td>{queue.reserved === null ? "—" : formatNumber(queue.reserved, language)}</td>
+                            <td>{formatNumber(queue.unavailable, language)}</td>
+                            <td>{formatNumber(queue.total, language)}</td>
                           </tr>
                         );
                       })}
@@ -209,8 +209,8 @@ export function DashboardPage() {
                     {data.solverLoads.map((load) => (
                       <tr key={load.solver}>
                         <th scope="row">{load.solver}</th>
-                        <td>{formatNumber(load.runningResources)} <span className="muted">({load.runningJobs} {t(load.runningJobs === 1 ? "job" : "jobsUnit")})</span></td>
-                        <td>{formatNumber(load.pendingResources)} <span className="muted">({load.pendingJobs} {t(load.pendingJobs === 1 ? "job" : "jobsUnit")})</span></td>
+                        <td>{formatNumber(load.runningResources, language)} <span className="muted">({formatNumber(load.runningJobs, language)} {t(load.runningJobs === 1 ? "job" : "jobsUnit")})</span></td>
+                        <td>{formatNumber(load.pendingResources, language)} <span className="muted">({formatNumber(load.pendingJobs, language)} {t(load.pendingJobs === 1 ? "job" : "jobsUnit")})</span></td>
                       </tr>
                     ))}
                   </tbody>

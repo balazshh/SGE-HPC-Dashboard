@@ -7,7 +7,7 @@ import { FreshnessBanner } from "../components/FreshnessBanner";
 import { BoschLogo } from "../components/BoschLogo";
 import { UserMenu } from "../components/UserMenu";
 import { useApi } from "../lib/api";
-import { CLIENT_NAVIGATION_EVENT, navigate } from "../lib/navigation";
+import { CLIENT_NAVIGATION_EVENT, DASHBOARD_REFRESH_EVENT, navigate } from "../lib/navigation";
 import { useUi } from "../lib/ui";
 import { DashboardPage } from "../pages/DashboardPage";
 import { HistoryPage } from "../pages/HistoryPage";
@@ -72,7 +72,35 @@ function usePathname() {
 
 function HeaderFreshness() {
   const summary = useApi<ClusterSummary>("/api/dashboard/summary", { refreshMs: 60_000 });
-  return summary.data ? <FreshnessBanner updatedAt={summary.data.updatedAt} /> : null;
+  const { t } = useUi();
+  const busy = summary.refreshing || (summary.loading && !summary.data);
+
+  return (
+    <div className="header-freshness">
+      <FreshnessBanner
+        updatedAt={summary.data?.updatedAt ?? null}
+        sourceStatus={summary.error ? "down" : summary.data?.healthStatus}
+        refreshing={summary.refreshing}
+        compact
+      />
+      <button
+        className={`refresh-icon${summary.refreshing ? " is-refreshing" : ""}`}
+        type="button"
+        aria-label={t("refreshCollector")}
+        title={t("refreshCollector")}
+        aria-busy={summary.refreshing}
+        disabled={busy}
+        onClick={() => {
+          summary.refetch();
+          window.dispatchEvent(new Event(DASHBOARD_REFRESH_EVENT));
+        }}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M20 11a8 8 0 0 0-14.7-4L3 9m0 0V4m0 5h5M4 13a8 8 0 0 0 14.7 4L21 15m0 0v5m0-5h-5" />
+        </svg>
+      </button>
+    </div>
+  );
 }
 
 function AppShell({ children, pathname }: { children: ReactNode; pathname: string }) {
@@ -96,7 +124,7 @@ function AppShell({ children, pathname }: { children: ReactNode; pathname: strin
             <div className="site-header__left">
               <BoschLogo />
               <span className="site-header__product">SGE HPC</span>
-              {showNavigation && pathname !== "/" && <HeaderFreshness />}
+              {showNavigation && <HeaderFreshness />}
             </div>
             <UserMenu />
           </div>

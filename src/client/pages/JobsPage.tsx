@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { CanonicalJobState, JobRecord, PaginatedJobs } from "../../shared/types/hpc";
 import { StatusPill } from "../components/StatusPill";
 import { useApi } from "../lib/api";
-import { formatBudapestDateTime } from "../lib/format";
+import { formatDateTime } from "../lib/format";
 import { useUi } from "../lib/ui";
 
 const PAGE_SIZE = 5;
@@ -15,7 +15,7 @@ export function JobsPage() {
   const [state, setState] = useState<(typeof ALL_STATES)[number]>("all");
   const [preset, setPreset] = useState<(typeof PRESETS)[number]>("30d");
   const [page, setPage] = useState(1);
-  const { statusLabel, t } = useUi();
+  const { language, statusLabel, t } = useUi();
 
   const historyPath = `/api/jobs/history?${new URLSearchParams({
     query,
@@ -66,8 +66,8 @@ export function JobsPage() {
                     <td>{job.jobId}</td>
                     <td>{job.name}</td>
                     <td><StatusPill value={job.state} /></td>
-                    <td>{formatBudapestDateTime(job.submittedAt)}</td>
-                    <td>{formatBudapestDateTime(job.startedAt)}</td>
+                    <td>{formatDateTime(job.submittedAt, language)}</td>
+                    <td>{formatDateTime(job.startedAt, language)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -154,9 +154,9 @@ export function JobsPage() {
                     <td>{job.jobId}</td>
                     <td>{job.name}</td>
                     <td><StatusPill value={job.state} /></td>
-                    <td>{formatBudapestDateTime(job.submittedAt)}</td>
-                    <td>{formatBudapestDateTime(job.startedAt)}</td>
-                    <td>{formatBudapestDateTime(job.finishedAt)}</td>
+                    <td>{formatDateTime(job.submittedAt, language)}</td>
+                    <td>{formatDateTime(job.startedAt, language)}</td>
+                    <td>{formatDateTime(job.finishedAt, language)}</td>
                   </tr>
                 ))}
               </tbody>

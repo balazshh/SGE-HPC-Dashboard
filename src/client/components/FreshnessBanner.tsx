@@ -1,16 +1,17 @@
 import type { OverviewSourceStatus } from "../../shared/types/hpc";
 import { getFreshnessLevel } from "../lib/freshness";
-import { formatBudapestDateTime } from "../lib/format";
+import { formatCompactDateTime, formatDateTime } from "../lib/format";
 import { useUi } from "../lib/ui";
 
 interface FreshnessBannerProps {
   updatedAt: string | null;
   sourceStatus?: OverviewSourceStatus;
   refreshing?: boolean;
+  compact?: boolean;
 }
 
-export function FreshnessBanner({ updatedAt, sourceStatus, refreshing = false }: FreshnessBannerProps) {
-  const { freshnessLabel, statusLabel, t } = useUi();
+export function FreshnessBanner({ updatedAt, sourceStatus, refreshing = false, compact = false }: FreshnessBannerProps) {
+  const { freshnessLabel, language, statusLabel, t } = useUi();
   const timestampLevel = updatedAt ? getFreshnessLevel(updatedAt) : "broken";
   const level = sourceStatus === "down" || sourceStatus === "no-data"
     ? "broken"
@@ -26,14 +27,17 @@ export function FreshnessBanner({ updatedAt, sourceStatus, refreshing = false }:
         : sourceStatus === "degraded" && timestampLevel === "fresh"
           ? statusLabel(sourceStatus)
           : freshnessLabel(level);
-  const time = updatedAt ? formatBudapestDateTime(updatedAt) : t("noSnapshot");
+  const detailedTime = updatedAt ? formatDateTime(updatedAt, language) : t("noSnapshot");
+  const time = updatedAt
+    ? compact ? formatCompactDateTime(updatedAt, language) : detailedTime
+    : t("noSnapshot");
   const description = updatedAt
-    ? t("freshnessBanner", { label, time })
+    ? t("freshnessBanner", { label, time: detailedTime })
     : t("noDataSource");
 
   return (
     <span
-      className={`freshness freshness--${level}`}
+      className={`freshness freshness--${level}${compact ? " freshness--compact" : ""}`}
       role="status"
       aria-label={description}
       title={description}
