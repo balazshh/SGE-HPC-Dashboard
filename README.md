@@ -137,14 +137,13 @@ History charts group the indexed `jobs_history` table directly; there is no roll
 
 ```bash
 git pull
-# Existing databases: apply drizzle/0001_job_metadata.sql once before restarting.
-# Apply every new numbered SQL migration now, before restarting the app or collectors.
+# Recreate/redeploy the database schema from drizzle/0000_initial.sql before restarting.
 docker build --network=host -t hpc-dashboard -f Containerfile .
 docker rm -f hpc-dashboard 2>/dev/null || true
 docker run -d --name hpc-dashboard --env-file .env -p 127.0.0.1:3001:3001 --restart unless-stopped hpc-dashboard
 ```
 
-The schema is consolidated in `drizzle/0000_initial.sql` for fresh deployments. Existing databases are never changed automatically by the collectors; back them up and apply `drizzle/0001_job_metadata.sql` before restarting the web app or collectors.
+The complete schema, including job queue/reason/node metadata, is consolidated in `drizzle/0000_initial.sql`. When deploying this version, recreate or redeploy the database tables from that file before starting the web app or collectors.
 
 ## Troubleshooting
 
@@ -156,4 +155,4 @@ nginx -t
 
 - Login failure: check `APP_BASE_URL`, `BETTER_AUTH_SECRET`, and all `ENTRA_*` values.
 - Empty/stale pages: run the collectors manually and check their MySQL access. The overview API is `/api/dashboard/overview` and uses `Cache-Control: no-store`.
-- Collector failure after upgrade: confirm all numbered migrations and the matching collector scripts were deployed together.
+- Collector failure after upgrade: confirm `drizzle/0000_initial.sql` and the matching collector scripts were deployed together.
