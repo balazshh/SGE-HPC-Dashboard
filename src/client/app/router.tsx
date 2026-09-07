@@ -79,7 +79,7 @@ function HeaderFreshness() {
     <div className="header-freshness">
       <FreshnessBanner
         updatedAt={summary.data?.updatedAt ?? null}
-        sourceStatus={summary.error ? "down" : summary.data?.healthStatus}
+        sourceStatus={summary.error ? "down" : undefined}
         refreshing={summary.refreshing}
         compact
       />

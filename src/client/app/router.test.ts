@@ -15,6 +15,7 @@ test("freshness is visible and page intros stay removed", () => {
   const router = readFileSync(new URL("./router.tsx", import.meta.url), "utf8");
   const freshness = readFileSync(new URL("../components/FreshnessBanner.tsx", import.meta.url), "utf8");
   const userMenu = readFileSync(new URL("../components/UserMenu.tsx", import.meta.url), "utf8");
+  const dashboard = readFileSync(new URL("../pages/DashboardPage.tsx", import.meta.url), "utf8");
   const css = readFileSync(new URL("./app.css", import.meta.url), "utf8");
   const pages = ["DashboardPage", "NodesPage", "JobsPage", "HistoryPage"]
     .map((name) => readFileSync(new URL(`../pages/${name}.tsx`, import.meta.url), "utf8"))
@@ -25,6 +26,8 @@ test("freshness is visible and page intros stay removed", () => {
   expect(router).toContain('showNavigation && <HeaderFreshness />');
   expect(router).toContain('className={`refresh-icon${summary.refreshing ? " is-refreshing" : ""}`}');
   expect(freshness).toContain("compact?: boolean");
+  expect(dashboard).not.toContain("dashboard-status");
+  expect(dashboard).not.toContain("<FreshnessBanner");
   expect(userMenu).toContain('<strong className="user-menu__email">{user.email}</strong>');
   expect(userMenu).not.toContain("{user.name}");
   expect(css).toContain(".metric-grid--dashboard .metric-card--featured");

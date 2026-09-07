@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 
 import type { Capacity, DashboardOverview } from "../../shared/types/hpc";
-import { FreshnessBanner } from "../components/FreshnessBanner";
 import { MetricCard } from "../components/MetricCard";
 import { useApi } from "../lib/api";
 import { formatDateTime, formatNumber } from "../lib/format";
@@ -58,24 +57,6 @@ export function DashboardPage() {
   const noData = data.sourceStatus === "no-data" || data.snapshotAt === null;
   return (
     <main className="page">
-      <section className="surface dashboard-status" aria-busy={overview.refreshing}>
-        <div className="dashboard-status__content">
-          <div>
-            <p className="dashboard-status__eyebrow">{data.scheduler.toUpperCase()} HPC</p>
-            <h1>{t("dashboard")}</h1>
-          </div>
-          <FreshnessBanner
-            updatedAt={data.snapshotAt}
-            sourceStatus={data.sourceStatus}
-            refreshing={overview.refreshing}
-            compact
-          />
-          {data.unavailableNodeCount > 0 && (
-            <span className="muted">{t("unavailableNodeCount", { count: data.unavailableNodeCount })}</span>
-          )}
-        </div>
-      </section>
-
       {overview.error && (
         <p className="dashboard-alert" role="alert">{t("refreshError")} {overview.error}</p>
       )}
