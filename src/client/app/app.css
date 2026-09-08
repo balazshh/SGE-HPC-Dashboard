@@ -1106,6 +1106,7 @@ tbody tr:hover {
 }
 
 .job-details {
+  scroll-margin-top: calc(var(--space-unit) * 12);
   display: grid;
   gap: calc(var(--space-unit) * 3);
   padding: calc(var(--space-unit) * 4);

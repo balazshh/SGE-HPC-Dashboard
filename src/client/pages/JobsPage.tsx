@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { CanonicalJobState, JobRecord, PaginatedJobs } from "../../shared/types/hpc";
 import { StatusPill } from "../components/StatusPill";
@@ -17,7 +17,12 @@ export function JobsPage() {
   const [preset, setPreset] = useState<(typeof PRESETS)[number]>("30d");
   const [page, setPage] = useState(1);
   const [selectedJob, setSelectedJob] = useState<JobRecord | null>(null);
+  const detailsRef = useRef<HTMLElement>(null);
   const { language, statusLabel, t } = useUi();
+
+  useEffect(() => {
+    if (selectedJob) detailsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [selectedJob]);
 
   const historyPath = `/api/jobs/history?${new URLSearchParams({
     query,
@@ -197,7 +202,7 @@ export function JobsPage() {
       </section>
 
       {selectedJob && (
-        <section className="surface job-details" role="dialog" aria-modal="true" aria-labelledby="job-details-title">
+        <section ref={detailsRef} className="surface job-details" role="dialog" aria-modal="true" aria-labelledby="job-details-title">
           <div className="section-title-row">
             <div>
               <h2 id="job-details-title">{t("jobDetails")}</h2>
