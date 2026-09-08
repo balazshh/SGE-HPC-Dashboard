@@ -67,6 +67,8 @@ EOF
 
 export PATH="$bindir:$PATH"
 export MYSQL_CAPTURE="$mysql_capture"
+# Keep the self-check isolated from a real deployment collector.env.
+export COLLECTOR_ENV_FILE=/dev/null
 export DB_HOST=stub
 export DB_NAME=stub
 export DB_USER=stub
