@@ -130,10 +130,12 @@ CLUSTER QUEUE CQLOAD USED RES AVAIL TOTAL aoACDS cdsuE
 all.q 0.00 4 0 12 16 0 0
 short.q 0.00 2 0 14 16 0 0
 EOF
-if QSTAT_CLUSTER_FILE="$workdir/qstat-cluster-overlap.txt" "$SCRIPT_DIR/collect-live.sh" >/dev/null 2>&1; then
+overlap_error="$workdir/cluster-overlap.error"
+if QSTAT_CLUSTER_FILE="$workdir/qstat-cluster-overlap.txt" "$SCRIPT_DIR/collect-live.sh" >/dev/null 2>"$overlap_error"; then
   echo "unconfirmed SGE queue overlap unexpectedly succeeded" >&2
   exit 1
 fi
+grep -q 'SGE queue totals overlap is not confirmed' "$overlap_error"
 
 cat > "$workdir/qhost-invalid.txt" <<'EOF'
 HOSTNAME ARCH NCPU NSOC NCOR NTHR LOAD MEMTOT MEMUSE SWAPTO SWAPUS

@@ -55,7 +55,7 @@ if ! awk '
 fi
 # shellcheck disable=SC1090
 source "$cluster_totals"
-if (( queue_count > 1 && SGE_QUEUE_TOTALS_NON_OVERLAPPING != "true" )); then
+if (( queue_count > 1 )) && [[ "$SGE_QUEUE_TOTALS_NON_OVERLAPPING" != "true" ]]; then
   echo "SGE queue totals overlap is not confirmed" >&2
   exit 1
 fi
