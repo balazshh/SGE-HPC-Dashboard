@@ -23,10 +23,9 @@ export function startRotatingFavicon() {
   const image = new Image();
   let loaded = false;
   let animationFrame = 0;
-  let lastFrame = 0;
+  let backgroundTimer = 0;
 
-  const render = (now: number) => {
-    if (now - lastFrame >= 1000 / 60) {
+  const draw = (now: number) => {
       const angle = (now / 6000) * Math.PI * 2;
       const faceScale = Math.cos(angle);
       const depthProjection = Math.sin(angle);
@@ -66,20 +65,25 @@ export function startRotatingFavicon() {
       context.restore();
 
       link.href = canvas.toDataURL("image/png");
-      lastFrame = now;
-    }
+  };
+
+  const render = (now: number) => {
+    draw(now);
     animationFrame = requestAnimationFrame(render);
   };
 
   const update = () => {
     cancelAnimationFrame(animationFrame);
+    clearInterval(backgroundTimer);
     animationFrame = 0;
+    backgroundTimer = 0;
     if (reducedMotion.matches) {
       link.href = staticHref;
       link.sizes.value = "512x512";
-    } else if (loaded && !document.hidden) {
+    } else if (loaded) {
       link.sizes.value = `${size}x${size}`;
-      animationFrame = requestAnimationFrame(render);
+      if (document.hidden) backgroundTimer = window.setInterval(() => draw(performance.now()), 1000 / 60);
+      else animationFrame = requestAnimationFrame(render);
     }
   };
 
