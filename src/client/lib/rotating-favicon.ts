@@ -23,7 +23,6 @@ export function startRotatingFavicon() {
   const image = new Image();
   let loaded = false;
   let animationFrame = 0;
-  let backgroundTimer = 0;
 
   const draw = (now: number) => {
       const angle = (now / 6000) * Math.PI * 2;
@@ -74,15 +73,13 @@ export function startRotatingFavicon() {
 
   const update = () => {
     cancelAnimationFrame(animationFrame);
-    clearInterval(backgroundTimer);
     animationFrame = 0;
-    backgroundTimer = 0;
     if (reducedMotion.matches) {
       link.href = staticHref;
       link.sizes.value = "512x512";
     } else if (loaded) {
       link.sizes.value = `${size}x${size}`;
-      if (document.hidden) backgroundTimer = window.setInterval(() => draw(performance.now()), 1000 / 60);
+      if (document.hidden) draw(0);
       else animationFrame = requestAnimationFrame(render);
     }
   };
