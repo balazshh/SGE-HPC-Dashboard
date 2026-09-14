@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Generates 3D metallic Bosch brand favicons:
-1. favicon.svg: Vector 3D metallic Bosch Armature with chrome bevel and drop shadow
-2. sapShell_Favicon.png: 3D metallic ray-shaded 512x512 PNG fallback (Ultra HiDPI / Retina)
-3. favicon.ico: Multi-resolution 3D metallic icon container (16x16, 32x32, 48x48, 64x64, 128x128, 256x256)
+Generates glossy chrome 3D Bosch brand favicons:
+1. favicon.svg: Vector glossy chrome Bosch Armature with specular glints, reflections and drop shadow
+2. sapShell_Favicon.png: Glossy chrome ray-shaded 512x512 PNG fallback (Ultra HiDPI / Retina)
+3. favicon.ico: Multi-resolution glossy chrome icon container (16x16, 32x32, 48x48, 64x64, 128x128, 256x256)
 Works stand-alone in subrepos (scripts/) or at workspace root.
 """
 import math
@@ -143,7 +143,7 @@ def is_inside_mark(x, y):
         if point_in_poly(x, y, sp): in2 = not in2
     return in2
 
-def render_3d_metallic(dim):
+def render_glossy_chrome(dim):
     ss = 2
     sw = dim * ss
     sh = dim * ss
@@ -152,7 +152,7 @@ def render_3d_metallic(dim):
     min_y, max_y = 0.18, 96.58
     w_svg = max_x - min_x
     h_svg = max_y - min_y
-    pad = 3.0 * ss
+    pad = 3.2 * ss
     scale = min((sw - 2 * pad) / w_svg, (sh - 2 * pad) / h_svg)
     offset_x = (sw - w_svg * scale) / 2.0
     offset_y = (sh - h_svg * scale) / 2.0
@@ -165,7 +165,7 @@ def render_3d_metallic(dim):
             if is_inside_mark(svg_x, svg_y):
                 mask[y * sw + x] = 1
 
-    bevel_rad = 2.4 * ss
+    bevel_rad = 3.0 * ss
     max_dist = bevel_rad
     dist_map = [0.0] * (sw * sh)
 
@@ -191,9 +191,9 @@ def render_3d_metallic(dim):
 
     rgba = bytearray(sw * sh * 4)
     shadow_alpha = bytearray(sw * sh)
-    s_off_y = int(1.4 * ss)
-    s_off_x = int(0.9 * ss)
-    s_blur = 1.8 * ss
+    s_off_y = int(1.8 * ss)
+    s_off_x = int(1.0 * ss)
+    s_blur = 2.2 * ss
     s_blur_sq = s_blur * s_blur
 
     for y in range(sh):
@@ -207,7 +207,7 @@ def render_3d_metallic(dim):
                             if 0 <= sx < sw:
                                 d2 = (sdx**2 + sdy**2) / s_blur_sq
                                 if d2 < 1.0:
-                                    val = int(85 * (1.0 - d2))
+                                    val = int(90 * (1.0 - d2))
                                     idx = sy * sw + sx
                                     if val > shadow_alpha[idx]:
                                         shadow_alpha[idx] = val
@@ -218,17 +218,19 @@ def render_3d_metallic(dim):
             sa = shadow_alpha[y * sw + x]
             if sa > 0 and mask[y * sw + x] == 0:
                 rgba[idx] = 12
-                rgba[idx+1] = 16
-                rgba[idx+2] = 22
+                rgba[idx+1] = 15
+                rgba[idx+2] = 20
                 rgba[idx+3] = sa
 
-    lx, ly, lz = -0.6, -0.6, 0.527
+    # Key light: Top-left elevated, intense shiny light
+    lx, ly, lz = -0.58, -0.58, 0.57
     l_len = math.sqrt(lx*lx + ly*ly + lz*lz)
     lx /= l_len; ly /= l_len; lz /= l_len
 
-    rlx, rly, rlz = 0.55, 0.55, 0.625
-    rl_len = math.sqrt(rlx*rlx + rly*rly + rlz*rlz)
-    rlx /= rl_len; rly /= rl_len; rlz /= rl_len
+    # Secondary fill light: Bottom-right
+    flx, fly, flz = 0.5, 0.6, 0.62
+    fl_len = math.sqrt(flx*flx + fly*fly + flz*flz)
+    flx /= fl_len; fly /= fl_len; flz /= fl_len
 
     for y in range(sh):
         for x in range(sw):
@@ -238,50 +240,82 @@ def render_3d_metallic(dim):
 
             d = dist_map[y * sw + x]
             frac = d / bevel_rad
-            h_val = math.sin(frac * (math.pi / 2))
+            # Curved convex bubble profile for high-gloss metallic sheen
+            h_val = math.sqrt(max(0.0, 1.0 - (1.0 - frac)**2))
 
             dx = (dist_map[y * sw + min(sw-1, x+1)] - dist_map[y * sw + max(0, x-1)]) * 0.5
             dy = (dist_map[min(sh-1, y+1) * sw + x] - dist_map[max(0, y-1) * sw + x]) * 0.5
 
-            nx = -dx * 1.6
-            ny = -dy * 1.6
+            nx = -dx * 2.0
+            ny = -dy * 2.0
             nz = 1.0
             n_len = math.sqrt(nx*nx + ny*ny + nz*nz)
             nx /= n_len; ny /= n_len; nz /= n_len
 
-            diag_pos = (x + y) / (sw + sh)
-            base_r = 175.0 * (1.0 - 0.45 * diag_pos) + 70.0 * (1.0 - frac)
-            base_g = 180.0 * (1.0 - 0.45 * diag_pos) + 70.0 * (1.0 - frac)
-            base_b = 188.0 * (1.0 - 0.42 * diag_pos) + 75.0 * (1.0 - frac)
+            # Reflection vector R = 2*(N.V)*N - V, where V = (0, 0, 1)
+            rx = 2.0 * nz * nx
+            ry = 2.0 * nz * ny
+            rz = 2.0 * nz * nz - 1.0
 
-            ndotl = max(0.0, nx * lx + ny * ly + nz * lz)
+            # Chrome Environment Reflection Map based on reflection vector R
+            elev = ry
+            if elev < -0.2:
+                # Sky: gradient from #ffffff down to silver-blue #a8b8c8
+                t = (elev + 1.0) / 0.8
+                cr = 160.0 + 95.0 * t
+                cg = 175.0 + 80.0 * t
+                cb = 200.0 + 55.0 * t
+            elif elev < 0.05:
+                # Horizon flare: intense white horizon shine
+                t = (elev + 0.2) / 0.25
+                flare = math.exp(-math.pow((t - 0.7) * 5.0, 2))
+                cr = 220.0 + 35.0 * flare
+                cg = 230.0 + 25.0 * flare
+                cb = 245.0 + 10.0 * flare
+            elif elev < 0.32:
+                # Dark ground reflection line (sharp chrome contrast)
+                t = (elev - 0.05) / 0.27
+                base_dark = 35.0 + 55.0 * t
+                cr = base_dark * 0.95
+                cg = base_dark * 1.0
+                cb = base_dark * 1.15
+            else:
+                # Ground bounce reflection
+                t = (elev - 0.32) / 0.68
+                bounce = math.exp(-math.pow((t - 0.65) * 3.5, 2)) * 95.0
+                cr = 80.0 + 70.0 * t + bounce
+                cg = 90.0 + 75.0 * t + bounce
+                cb = 105.0 + 85.0 * t + bounce * 1.05
+
+            # Specular Highlights (Blinn-Phong)
             hx, hy, hz = lx, ly, lz + 1.0
             h_len = math.sqrt(hx*hx + hy*hy + hz*hz)
             hx /= h_len; hy /= h_len; hz /= h_len
             ndoth = max(0.0, nx * hx + ny * hy + nz * hz)
-            spec1 = math.pow(ndoth, 20.0) * 0.65
-            spec1_sharp = math.pow(ndoth, 50.0) * 0.85
+            spec_sharp = math.pow(ndoth, 80.0) * 260.0
+            spec_broad = math.pow(ndoth, 22.0) * 110.0
 
-            rhx, rhy, rhz = rlx, rly, rlz + 1.0
-            rh_len = math.sqrt(rhx*rhx + rhy*rhy + rhz*rhz)
-            rhx /= rh_len; rhy /= rh_len; rhz /= rh_len
-            rndoth = max(0.0, nx * rhx + ny * rhy + nz * rhz)
-            spec2 = math.pow(rndoth, 28.0) * 0.45
+            fhx, fhy, fhz = flx, fly, flz + 1.0
+            fh_len = math.sqrt(fhx*fhx + fhy*fhy + fhz*fhz)
+            fhx /= fh_len; fhy /= fh_len; fhz /= fh_len
+            fndoth = max(0.0, nx * fhx + ny * fhy + nz * fhz)
+            spec_rim = math.pow(fndoth, 40.0) * 90.0
 
-            horizon = math.exp(-math.pow((ny - 0.15) * 4.5, 2)) * 0.35
+            lit_r = cr + spec_sharp + spec_broad + spec_rim
+            lit_g = cg + spec_sharp + spec_broad + spec_rim
+            lit_b = cb + spec_sharp * 1.02 + spec_broad * 1.05 + spec_rim * 1.05
 
-            ambient = 0.45 + 0.2 * h_val
-            total_light = ambient + 0.45 * ndotl + horizon
-
-            lit_r = base_r * total_light + 255.0 * (spec1 + spec1_sharp + spec2)
-            lit_g = base_g * total_light + 255.0 * (spec1 + spec1_sharp + spec2)
-            lit_b = base_b * total_light + 255.0 * (spec1 * 1.05 + spec1_sharp + spec2 * 1.05)
-
-            if frac < 0.2:
-                darkening = 0.45 + 0.55 * (frac / 0.2)
-                lit_r *= darkening
-                lit_g *= darkening
-                lit_b *= darkening
+            if frac < 0.15:
+                edge_light = max(0.0, -(nx + ny) * 0.707)
+                edge_glint = edge_light * (1.0 - frac / 0.15) * 140.0
+                lit_r += edge_glint
+                lit_g += edge_glint
+                lit_b += edge_glint * 1.05
+                if (nx + ny) > 0.3:
+                    darken = 1.0 - (1.0 - frac / 0.15) * 0.4
+                    lit_r *= darken
+                    lit_g *= darken
+                    lit_b *= darken
 
             rgba[idx] = int(max(0.0, min(255.0, lit_r)))
             rgba[idx+1] = int(max(0.0, min(255.0, lit_g)))
@@ -326,71 +360,70 @@ def render_3d_metallic(dim):
     out += chunk(b'IEND', b'')
     return out
 
-# 1. Output 3D Metallic SVG
+# 1. Output Glossy Chrome SVG
 svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 97 97">
-  <!-- 3D Metallic Bosch Armature -->
+  <!-- Glossy Chrome Bosch Armature -->
   <defs>
-    <filter id="bosch-3d-shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/>
-      <feOffset dx="0.8" dy="1.6" result="offsetblur"/>
-      <feComponentTransfer>
-        <feFuncA type="linear" slope="0.4"/>
-      </feComponentTransfer>
-      <feMerge>
-        <feMergeNode/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+    <filter id="chrome-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="1.0" dy="2.0" stdDeviation="1.8" flood-color="#0b1016" flood-opacity="0.45"/>
     </filter>
 
-    <filter id="metallic-bevel" x="-10%" y="-10%" width="120%" height="120%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="0.7" result="blur"/>
-      <feSpecularLighting in="blur" surfaceScale="2.2" specularConstant="1.4" specularExponent="18" lighting-color="#ffffff" result="specOut">
-        <feDistantLight azimuth="225" elevation="52"/>
+    <filter id="chrome-bevel" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="0.6" result="blurMap"/>
+      
+      <feSpecularLighting in="blurMap" surfaceScale="3.0" specularConstant="2.2" specularExponent="35" lighting-color="#ffffff" result="sharpSpec">
+        <feDistantLight azimuth="220" elevation="56"/>
       </feSpecularLighting>
-      <feComposite in="specOut" in2="SourceAlpha" operator="in" result="specular"/>
+      <feComposite in="sharpSpec" in2="SourceAlpha" operator="in" result="sharpSpecCut"/>
 
-      <feDiffuseLighting in="blur" surfaceScale="1.2" diffuseConstant="0.9" lighting-color="#d0d8e2" result="diffuseOut">
-        <feDistantLight azimuth="45" elevation="60"/>
+      <feDiffuseLighting in="blurMap" surfaceScale="1.4" diffuseConstant="1.1" lighting-color="#e2ebf5" result="diffuseFill">
+        <feDistantLight azimuth="50" elevation="65"/>
       </feDiffuseLighting>
-      <feComposite in="diffuseOut" in2="SourceAlpha" operator="in" result="diffuse"/>
+      <feComposite in="diffuseFill" in2="SourceAlpha" operator="in" result="diffuseCut"/>
 
       <feMerge>
         <feMergeNode in="SourceGraphic"/>
-        <feMergeNode in="diffuse"/>
-        <feMergeNode in="specular"/>
+        <feMergeNode in="diffuseCut"/>
+        <feMergeNode in="sharpSpecCut"/>
       </feMerge>
     </filter>
 
-    <linearGradient id="chromeRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="glossyRingGrad" x1="15%" y1="0%" x2="85%" y2="100%">
       <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="18%" stop-color="#edf1f5"/>
-      <stop offset="35%" stop-color="#b8c2cc"/>
-      <stop offset="50%" stop-color="#737d88"/>
-      <stop offset="68%" stop-color="#9ea9b4"/>
-      <stop offset="85%" stop-color="#ced6de"/>
-      <stop offset="100%" stop-color="#545c66"/>
+      <stop offset="12%" stop-color="#edf4fc"/>
+      <stop offset="28%" stop-color="#adc1d6"/>
+      <stop offset="42%" stop-color="#ffffff"/>
+      <stop offset="46%" stop-color="#182330"/>
+      <stop offset="55%" stop-color="#3d4e60"/>
+      <stop offset="70%" stop-color="#9bb3cc"/>
+      <stop offset="86%" stop-color="#d6e3f0"/>
+      <stop offset="100%" stop-color="#4a5a6a"/>
     </linearGradient>
 
-    <linearGradient id="chromeCoreGrad" x1="15%" y1="0%" x2="85%" y2="100%">
+    <linearGradient id="glossyCoreGrad" x1="10%" y1="0%" x2="90%" y2="100%">
       <stop offset="0%" stop-color="#ffffff"/>
-      <stop offset="22%" stop-color="#e0e5eb"/>
-      <stop offset="42%" stop-color="#939da8"/>
-      <stop offset="58%" stop-color="#606974"/>
-      <stop offset="78%" stop-color="#b0b9c2"/>
-      <stop offset="100%" stop-color="#495058"/>
+      <stop offset="16%" stop-color="#e8f0f8"/>
+      <stop offset="32%" stop-color="#9cb2c7"/>
+      <stop offset="44%" stop-color="#ffffff"/>
+      <stop offset="48%" stop-color="#101822"/>
+      <stop offset="60%" stop-color="#324252"/>
+      <stop offset="76%" stop-color="#b2c6db"/>
+      <stop offset="90%" stop-color="#e2ecf7"/>
+      <stop offset="100%" stop-color="#3e4d5c"/>
     </linearGradient>
 
-    <linearGradient id="rimGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
-      <stop offset="45%" stop-color="#6b7580" stop-opacity="0.7"/>
-      <stop offset="100%" stop-color="#2a3036" stop-opacity="0.85"/>
+    <linearGradient id="glossyRimGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="35%" stop-color="#73899f" stop-opacity="0.8"/>
+      <stop offset="70%" stop-color="#16202c" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#eaf2fa" stop-opacity="0.85"/>
     </linearGradient>
   </defs>
 
-  <g filter="url(#bosch-3d-shadow)">
-    <g filter="url(#metallic-bevel)">
-      <path d="{armature_p1}" fill="url(#chromeRingGrad)" stroke="url(#rimGrad)" stroke-width="0.4" stroke-linejoin="round"/>
-      <path d="{armature_p2}" fill="url(#chromeCoreGrad)" stroke="url(#rimGrad)" stroke-width="0.4" stroke-linejoin="round"/>
+  <g filter="url(#chrome-shadow)">
+    <g filter="url(#chrome-bevel)">
+      <path d="{armature_p1}" fill="url(#glossyRingGrad)" stroke="url(#glossyRimGrad)" stroke-width="0.35" stroke-linejoin="round"/>
+      <path d="{armature_p2}" fill="url(#glossyCoreGrad)" stroke="url(#glossyRimGrad)" stroke-width="0.35" stroke-linejoin="round"/>
     </g>
   </g>
 </svg>
@@ -399,18 +432,18 @@ svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 97 97">
 for target_dir in app_dirs:
     with open(os.path.join(target_dir, "favicon.svg"), "w") as f:
         f.write(svg_content)
-print("Synchronized 3D metallic favicon.svg")
+print("Synchronized glossy chrome favicon.svg")
 
-# 2. Output multi-resolution 3D metallic PNGs
+# 2. Output multi-resolution glossy chrome PNGs
 png_512_data = None
 for dim in (16, 32, 48, 64, 128, 256, 512):
-    data = render_3d_metallic(dim)
+    data = render_glossy_chrome(dim)
     if dim == 512:
         png_512_data = data
     fn = f"sapShell_Favicon_{dim}x{dim}.png"
     with open(os.path.join(repo_root, fn), "wb") as f:
         f.write(data)
-    print(f"Generated 3D metallic {fn}")
+    print(f"Generated glossy chrome {fn}")
 
 # 3. Generate multi-size favicon.ico (16, 32, 48, 64, 128, 256)
 def make_ico(png_files, out_path):
@@ -442,10 +475,10 @@ ico_sizes = [
 ]
 for target_dir in app_dirs:
     make_ico(ico_sizes, os.path.join(target_dir, "favicon.ico"))
-print("Synchronized 3D metallic favicon.ico (including 256x256)")
+print("Synchronized glossy chrome favicon.ico (including 256x256)")
 
 # 4. Synchronize 512x512 sapShell_Favicon.png (Ultra HiDPI / Retina / Apple Touch)
 for target_dir in app_dirs:
     with open(os.path.join(target_dir, "sapShell_Favicon.png"), "wb") as f:
         f.write(png_512_data)
-print("Synchronized 3D metallic sapShell_Favicon.png (512x512)")
+print("Synchronized glossy chrome sapShell_Favicon.png (512x512)")
