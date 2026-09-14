@@ -2,8 +2,8 @@
 """
 Generates 3D metallic Bosch brand favicons:
 1. favicon.svg: Vector 3D metallic Bosch Armature with chrome bevel and drop shadow
-2. sapShell_Favicon.png: 3D metallic ray-shaded 128x128 PNG fallback
-3. favicon.ico: Multi-resolution 3D metallic icon container (16x16, 32x32, 48x48, 128x128)
+2. sapShell_Favicon.png: 3D metallic ray-shaded 512x512 PNG fallback (Ultra HiDPI / Retina)
+3. favicon.ico: Multi-resolution 3D metallic icon container (16x16, 32x32, 48x48, 64x64, 128x128, 256x256)
 Works stand-alone in subrepos (scripts/) or at workspace root.
 """
 import math
@@ -402,17 +402,17 @@ for target_dir in app_dirs:
 print("Synchronized 3D metallic favicon.svg")
 
 # 2. Output multi-resolution 3D metallic PNGs
-png_128_data = None
-for dim in (16, 32, 48, 64, 128, 256):
+png_512_data = None
+for dim in (16, 32, 48, 64, 128, 256, 512):
     data = render_3d_metallic(dim)
-    if dim == 128:
-        png_128_data = data
+    if dim == 512:
+        png_512_data = data
     fn = f"sapShell_Favicon_{dim}x{dim}.png"
     with open(os.path.join(repo_root, fn), "wb") as f:
         f.write(data)
     print(f"Generated 3D metallic {fn}")
 
-# 3. Generate multi-size favicon.ico
+# 3. Generate multi-size favicon.ico (16, 32, 48, 64, 128, 256)
 def make_ico(png_files, out_path):
     entries = []
     offset = 6 + len(png_files) * 16
@@ -436,14 +436,16 @@ ico_sizes = [
     ("sapShell_Favicon_16x16.png", 16, 16),
     ("sapShell_Favicon_32x32.png", 32, 32),
     ("sapShell_Favicon_48x48.png", 48, 48),
+    ("sapShell_Favicon_64x64.png", 64, 64),
     ("sapShell_Favicon_128x128.png", 128, 128),
+    ("sapShell_Favicon_256x256.png", 256, 256),
 ]
 for target_dir in app_dirs:
     make_ico(ico_sizes, os.path.join(target_dir, "favicon.ico"))
-print("Synchronized 3D metallic favicon.ico")
+print("Synchronized 3D metallic favicon.ico (including 256x256)")
 
-# 4. Synchronize 128x128 sapShell_Favicon.png
+# 4. Synchronize 512x512 sapShell_Favicon.png (Ultra HiDPI / Retina / Apple Touch)
 for target_dir in app_dirs:
     with open(os.path.join(target_dir, "sapShell_Favicon.png"), "wb") as f:
-        f.write(png_128_data)
-print("Synchronized 3D metallic sapShell_Favicon.png")
+        f.write(png_512_data)
+print("Synchronized 3D metallic sapShell_Favicon.png (512x512)")
