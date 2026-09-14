@@ -17,7 +17,7 @@ export function startRotatingFavicon() {
   let lastFrame = 0;
 
   const render = (now: number) => {
-    if (now - lastFrame >= 1000 / 12) {
+    if (now - lastFrame >= 1000 / 30) {
       const angle = (now / 6000) * Math.PI * 2;
       const faceScale = Math.cos(angle);
       const depthProjection = Math.sin(angle);
