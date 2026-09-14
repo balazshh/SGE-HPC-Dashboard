@@ -17,7 +17,7 @@ export function startRotatingFavicon() {
       context.clearRect(0, 0, 64, 64);
       context.save();
       context.translate(32, 32);
-      context.rotate((now / 6000) * Math.PI * 2);
+      context.scale(Math.cos((now / 6000) * Math.PI * 2), 1);
       context.drawImage(image, -30, -30, 60, 60);
       context.restore();
       link.href = canvas.toDataURL("image/png");
