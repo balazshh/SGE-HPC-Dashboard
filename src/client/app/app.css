@@ -316,14 +316,17 @@ h3 {
 }
 
 .site-sidebar {
+  position: sticky;
+  top: 79px;
+  height: calc(100vh - 79px);
+  align-self: start;
+  overflow: hidden;
   padding: calc(var(--space-unit) * 7) calc(var(--space-unit) * 4) calc(var(--space-unit) * 8) calc(var(--space-unit) * 5);
   background: var(--color-background);
   border-right: 1px solid var(--color-border);
 }
 
 .site-nav {
-  position: sticky;
-  top: calc(var(--space-unit) * 14);
   display: grid;
   gap: var(--space-unit);
 }
@@ -1241,6 +1244,9 @@ tbody tr:hover {
   }
 
   .site-sidebar {
+    position: static;
+    height: auto;
+    overflow: visible;
     padding: calc(var(--space-unit) * 2) calc(var(--space-unit) * 3);
     border-right: 0;
     border-bottom: 1px solid var(--color-border);
